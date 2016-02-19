@@ -44,10 +44,18 @@ class IOSWorkflow extends Workflow {
       return hasIdeviceId ? ValidationType.installed : ValidationType.missing;
     };
 
-    iosValidator.addValidator(new Validator(
+    Validator xcodeValidator = new Validator(
       'XCode',
       description: 'enable development for iOS devices',
       resolution: 'Download at https://developer.apple.com/xcode/download/',
+      validatorFunction: _xcodeExists
+    );
+    iosValidator.addValidator(xcodeValidator);
+
+    xcodeValidator.addValidator(new Validator(
+      'XCode EULA',
+      description: 'XCode end user license agreement',
+      resolution: "Open XCode or run the command 'sudo xcodebuild -license'",
       validatorFunction: _xcodeExists
     ));
 
