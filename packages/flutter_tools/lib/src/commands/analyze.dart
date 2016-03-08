@@ -294,39 +294,14 @@ class AnalyzeCommand extends FlutterCommand {
     for (String package in packages.keys)
       packagesBody.writeln('$package:${path.toUri(packages[package])}');
 
-    /// specify analysis options
-    /// note that until there is a default "all-in" lint rule-set we need
-    /// to opt-in to all desired lints (https://github.com/dart-lang/sdk/issues/25843)
-    String optionsBody = '''
-analyzer:
-  errors:
-    # we allow overriding fields (if they use super, ideally...)
-    strong_mode_invalid_field_override: ignore
-    # we allow type narrowing
-    strong_mode_invalid_method_override: ignore
-    todo: ignore
-linter:
-  rules:
-    - camel_case_types
-    # sometimes we have no choice (e.g. when matching other platforms)
-    # - constant_identifier_names
-    - empty_constructor_bodies
-    # disabled until regexp fix is pulled in (https://github.com/flutter/flutter/pull/1996)
-    # - library_names
-    - library_prefixes
-    - non_constant_identifier_names
-    # too many false-positives; code review should catch real instances
-    # - one_member_abstracts
-    - slash_for_doc_comments
-    - super_goes_last
-    - type_init_formals
-    - unnecessary_brace_in_string_interp
-''';
+    // Specify analysis options. Note that until there is a default "all-in" 
+    // lint rule-set we need to opt-in to all desired lints
+    // (https://github.com/dart-lang/sdk/issues/25843).
+    File optionsFile = new File(path.join(ArtifactStore.flutterRoot, 'packages', 'flutter_tools', '.analysis_options'));
 
     // save the Dart file and the .packages file to disk
     Directory host = Directory.systemTemp.createTempSync('flutter-analyze-');
     File mainFile = new File(path.join(host.path, 'main.dart'))..writeAsStringSync(mainBody.toString());
-    File optionsFile = new File(path.join(host.path, '_analysis.options'))..writeAsStringSync(optionsBody.toString());
     File packagesFile = new File(path.join(host.path, '.packages'))..writeAsStringSync(packagesBody.toString());
 
     List<String> cmd = <String>[
@@ -380,85 +355,46 @@ linter:
       'Analyzing [${mainFile.path}]...',
       new RegExp('^\\[(hint|error)\\] Unused import \\(${mainFile.path},'),
       new RegExp(r'^\[.+\] .+ \(.+/\.pub-cache/.+'),
-      new RegExp('^\\[error\\] The argument type \'List<T>\' cannot be assigned to the parameter type \'List<.+>\''), // until we have generic methods, there's not much choice if you want to use map()
-      new RegExp(r'^\[error\] Type check failed: .*\(dynamic\) is not of type'), // allow unchecked casts from dynamic
-      new RegExp('\\[warning\\] Missing concrete implementation of \'RenderObject\\.applyPaintTransform\''), // https://github.com/dart-lang/sdk/issues/25232
-      new RegExp(r'[0-9]+ (error|warning|hint|lint).+found\.'),
-      new RegExp(r'^$'),
     ];
 
-    RegExp generalPattern = new RegExp(r'^\[(error|warning|hint|lint)\] (.+) \(([^(),]+), line ([0-9]+), col ([0-9]+)\)$');
-    RegExp allowedIdentifiersPattern = new RegExp(r'_?([A-Z]|_+)\b');
-    RegExp constructorTearOffsPattern = new RegExp('.+#.+// analyzer doesn\'t like constructor tear-offs');
-    RegExp ignorePattern = new RegExp(r'// analyzer says "([^"]+)"');
     RegExp conflictingNamesPattern = new RegExp('^The imported libraries \'([^\']+)\' and \'([^\']+)\' cannot have the same name \'([^\']+)\'\$');
     RegExp missingFilePattern = new RegExp('^Target of URI does not exist: \'([^\')]+)\'\$');
 
-    Set<String> changedFiles = new Set<String>(); // files about which we've complained that they changed
+    _AnalysisFilter _filter = new _AnalysisFilter();
 
     List<String> errorLines = output.toString().split('\n');
     for (String errorLine in errorLines) {
-      if (patternsToSkip.every((Pattern pattern) => pattern.allMatches(errorLine).isEmpty)) {
-        Match groups = generalPattern.firstMatch(errorLine);
-        if (groups != null) {
-          String level = groups[1];
-          String filename = groups[3];
-          String errorMessage = groups[2];
-          int lineNumber = int.parse(groups[4]);
-          int colNumber = int.parse(groups[5]);
-          File source = new File(filename);
-          List<String> sourceLines = source.readAsLinesSync();
-          String sourceLine;
-          try {
-            if (lineNumber > sourceLines.length)
-              throw new FileChanged();
-            sourceLine = sourceLines[lineNumber-1];
-            if (colNumber > sourceLine.length)
-              throw new FileChanged();
-          } on FileChanged {
-            if (changedFiles.add(filename))
-              printError('[warning] File shrank during analysis ($filename)');
-            sourceLine = '';
-            lineNumber = 1;
-            colNumber = 1;
-          }
-          bool shouldIgnore = false;
-          if (filename == mainFile.path) {
-            Match libs = conflictingNamesPattern.firstMatch(errorMessage);
-            Match missing = missingFilePattern.firstMatch(errorMessage);
-            if (libs != null) {
-              errorLine = '[$level] $errorMessage (${dartFiles[lineNumber-1]})'; // strip the reference to the generated main.dart
-            } else if (missing != null) {
-              errorLine = '[$level] File does not exist (${missing[1]})';
-            } else {
-              errorLine += ' (Please file a bug on the "flutter analyze" command saying that you saw this message.)';
-            }
-          } else if (filename.endsWith('.mojom.dart')) {
-            // autogenerated code - TODO(ianh): Fix the Dart mojom compiler
-            shouldIgnore = true;
-          } else if ((sourceLines[0] == '/**') && (' * DO NOT EDIT. This is code generated'.matchAsPrefix(sourceLines[1]) != null)) {
-            // autogenerated code - TODO(ianh): Fix the intl package resource generator
-            shouldIgnore = true;
-          } else if (level == 'lint' && errorMessage == 'Name non-constant identifiers using lowerCamelCase.') {
-            if (allowedIdentifiersPattern.matchAsPrefix(sourceLine, colNumber-1) != null)
-              shouldIgnore = true;
-          } else if (constructorTearOffsPattern.allMatches(sourceLine).isNotEmpty) {
-            shouldIgnore = true;
+      if (patternsToSkip.any((Pattern pattern) => pattern.allMatches(errorLine).isNotEmpty))
+        continue;
+
+      if (_filter.shouldFilter(errorLine))
+        continue;
+
+      Match groups = _filter.generalPattern.firstMatch(errorLine);
+      if (groups != null) {
+        String level = groups[1];
+        String filename = groups[3];
+        String errorMessage = groups[2];
+        int lineNumber = int.parse(groups[4]);
+
+        bool shouldIgnore = false;
+        if (filename == mainFile.path) {
+          Match libs = conflictingNamesPattern.firstMatch(errorMessage);
+          Match missing = missingFilePattern.firstMatch(errorMessage);
+          if (libs != null) {
+            // strip the reference to the generated main.dart
+            errorLine = '[$level] $errorMessage (${dartFiles[lineNumber-1]})';
+          } else if (missing != null) {
+            errorLine = '[$level] File does not exist (${missing[1]})';
           } else {
-            Iterable<Match> ignoreGroups = ignorePattern.allMatches(sourceLine);
-            for (Match ignoreGroup in ignoreGroups) {
-              if (errorMessage.contains(ignoreGroup[1])) {
-                shouldIgnore = true;
-                break;
-              }
-            }
+            errorLine += ' (Please file a bug on the "flutter analyze" command saying that you saw this message.)';
           }
-          if (shouldIgnore)
-            continue;
         }
-        printError(errorLine);
-        errorCount += 1;
+        if (shouldIgnore)
+          continue;
       }
+      printError(errorLine);
+      errorCount += 1;
     }
     stopwatch.stop();
     String elapsed = (stopwatch.elapsedMilliseconds / 1000.0).toStringAsFixed(1);
@@ -529,6 +465,8 @@ linter:
 
       for (AnalysisError error in errors)
         printStatus(error.toString());
+      if (errors.isNotEmpty)
+        printStatus('');
 
       // Print an analysis summary.
       String errorsMessage;
@@ -565,10 +503,13 @@ linter:
     analysisErrors[fileErrors.file] = fileErrors.errors;
   }
 
-  bool _filterError(AnalysisError error) {
-    // TODO(devoncarew): Also filter the regex items from `analyzeOnce()`.
+  _AnalysisFilter _filter = new _AnalysisFilter();
 
+  bool _filterError(AnalysisError error) {
     if (error.type == 'TODO')
+      return true;
+
+    if (_filter.shouldFilter(error.toCliString()))
       return true;
 
     return false;
@@ -583,6 +524,76 @@ linter:
       .expand((FileSystemEntity entity) {
         return entity is Directory ? _gatherProjectPaths(entity.path) : <String>[];
       });
+  }
+}
+
+class _AnalysisFilter {
+  final List<Pattern> patternsToSkip = <Pattern>[
+    // until we have generic methods, there's not much choice if you want to use map()
+    new RegExp('^\\[error\\] The argument type \'List<T>\' cannot be assigned to the parameter type \'List<.+>\''),
+    // allow unchecked casts from dynamic
+    new RegExp(r'^\[error\] Type check failed: .*\(dynamic\) is not of type'),
+    // https://github.com/dart-lang/sdk/issues/25232
+    new RegExp('\\[warning\\] Missing concrete implementation of \'RenderObject\\.applyPaintTransform\''),
+    new RegExp(r'[0-9]+ (error|warning|hint|lint).+found\.'),
+    new RegExp(r'^$'),
+  ];
+
+  final RegExp generalPattern = new RegExp(r'^\[(error|warning|hint|lint)\] (.+) \(([^(),]+), line ([0-9]+), col ([0-9]+)\)$');
+  final RegExp allowedIdentifiersPattern = new RegExp(r'_?([A-Z]|_+)\b');
+  final RegExp constructorTearOffsPattern = new RegExp('.+#.+// analyzer doesn\'t like constructor tear-offs');
+  final RegExp ignorePattern = new RegExp(r'// analyzer says "([^"]+)"');
+
+  // Files about which we've complained that they changed.
+  Set<String> changedFiles = new Set<String>();
+
+  bool shouldFilter(String errorLine) {
+    if (patternsToSkip.any((Pattern pattern) => pattern.allMatches(errorLine).isNotEmpty))
+      return true;
+
+    Match groups = generalPattern.firstMatch(errorLine);
+    if (groups != null) {
+      String level = groups[1];
+      String filename = groups[3];
+      String errorMessage = groups[2];
+      int lineNumber = int.parse(groups[4]);
+      int colNumber = int.parse(groups[5]);
+
+      File source = new File(filename);
+      List<String> sourceLines = source.readAsLinesSync();
+      String sourceLine;
+      try {
+        if (lineNumber > sourceLines.length)
+          throw new FileChanged();
+        sourceLine = sourceLines[lineNumber - 1];
+        if (colNumber > sourceLine.length)
+          throw new FileChanged();
+      } on FileChanged {
+        if (changedFiles.add(filename))
+          printError('[warning] File shrank during analysis ($filename)');
+        sourceLine = '';
+        lineNumber = 1;
+        colNumber = 1;
+      }
+
+      if (filename.endsWith('.mojom.dart')) {
+        // autogenerated code - TODO(ianh): Fix the Dart mojom compiler
+        return true;
+      } else if (level == 'lint' && errorMessage == 'Name non-constant identifiers using lowerCamelCase.') {
+        if (allowedIdentifiersPattern.matchAsPrefix(sourceLine, colNumber - 1) != null)
+          return true;
+      } else if (constructorTearOffsPattern.allMatches(sourceLine).isNotEmpty) {
+        return true;
+      } else {
+        Iterable<Match> ignoreGroups = ignorePattern.allMatches(sourceLine);
+        for (Match ignoreGroup in ignoreGroups) {
+          if (errorMessage.contains(ignoreGroup[1]))
+            return true;
+        }
+      }
+    }
+
+    return false;
   }
 }
 
@@ -611,15 +622,6 @@ class AnalysisServer {
 
     Stream<String> inStream = _process.stdout.transform(UTF8.decoder).transform(const LineSplitter());
     inStream.listen(_handleServerResponse);
-
-    // Available options (many of these are obsolete):
-    //   enableAsync, enableDeferredLoading, enableEnums, enableNullAwareOperators,
-    //   enableSuperMixins, generateDart2jsHints, generateHints, generateLints
-    _sendCommand('analysis.updateOptions', <String, dynamic>{
-      'options': <String, dynamic>{
-        'enableSuperMixins': true
-      }
-    });
 
     _sendCommand('server.setSubscriptions', <String, dynamic>{
       'subscriptions': <String>['STATUS']
@@ -723,6 +725,16 @@ class AnalysisError implements Comparable<AnalysisError> {
   int get startColumn => json['location']['startColumn'];
   int get offset => json['location']['offset'];
 
+  String get errorType {
+    String errorType = severity.toLowerCase();
+
+    // Translate INFOs into LINTS and HINTS.
+    if (severity == 'INFO' && (type == 'HINT' || type == 'LINT'))
+      errorType = type.toLowerCase();
+
+    return errorType;
+  }
+
   int compareTo(AnalysisError other) {
     // Sort in order of file path, error location, severity, and message.
     if (file != other.file)
@@ -737,6 +749,9 @@ class AnalysisError implements Comparable<AnalysisError> {
 
     return message.compareTo(other.message);
   }
+
+  /// Return a String that looks like the dartanalyzer's output.
+  String toCliString() => '[$errorType] $message ($file, line $startLine, col $startColumn)';
 
   String toString() {
     String relativePath = path.relative(file);

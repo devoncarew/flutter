@@ -47,7 +47,7 @@ class AndroidSdk {
   AndroidSdkVersion _latestVersion;
 
   static AndroidSdk locateAndroidSdk() {
-    // TODO: Use explicit configuration information from a metadata file?
+    // TODO(devoncarew): Use explicit configuration information from a metadata file?
 
     String androidHomeDir;
     if (Platform.environment.containsKey('ANDROID_HOME')) {
