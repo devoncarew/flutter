@@ -48,7 +48,20 @@ class AndroidDevice extends Device {
   final String modelID;
   final String deviceCodeName;
 
-  bool get isLocalEmulator => false;
+  bool get isLocalEmulator {
+    // TODO(devoncarew): Replace these add-hoc methods with more rigorous ones.
+    // adb shell getprop ro.product.cpu.abi
+    if (id.startsWith('emulator-'))
+      return true;
+
+    if (name.contains('x86'))
+      return true;
+
+    if (productID == 'vbox86p' || deviceCodeName == 'vbox86p')
+      return true;
+
+    return false;
+  }
 
   _AdbLogReader _logReader;
   _AndroidDevicePortForwarder _portForwarder;
@@ -272,7 +285,7 @@ class AndroidDevice extends Device {
   }
 
   @override
-  TargetPlatform get platform => TargetPlatform.android;
+  TargetPlatform get platform => isLocalEmulator ? TargetPlatform.android_x64 : TargetPlatform.android_arm;
 
   void clearLogs() {
     runSync(adbCommandForDevice(<String>['logcat', '-c']));
@@ -359,7 +372,7 @@ class AndroidDevice extends Device {
         throw 'Error code $exitCode returned when running ${catCommand.join(" ")}';
 
       runSync(adbCommandForDevice(
-          <String>['shell', 'run-as', apk.id, 'rm', tracePath]
+        <String>['shell', 'run-as', apk.id, 'rm', tracePath]
       ));
       return localPath;
     }
@@ -549,12 +562,9 @@ class _AndroidDevicePortForwarder extends DevicePortForwarder {
   List<ForwardedPort> get forwardedPorts {
     final List<ForwardedPort> ports = <ForwardedPort>[];
 
-    String stdout = runCheckedSync(
-      <String>[
-        androidSdk.adbPath,
-        'forward',
-        '--list'
-      ]);
+    String stdout = runCheckedSync(device.adbCommandForDevice(
+      <String>['forward', '--list']
+    ));
 
     List<String> lines = LineSplitter.split(stdout).toList();
     for (String line in lines) {
@@ -580,30 +590,22 @@ class _AndroidDevicePortForwarder extends DevicePortForwarder {
     return ports;
   }
 
-  Future<int> forward(int devicePort, {int hostPort: null}) async {
+  Future<int> forward(int devicePort, { int hostPort: null }) async {
     if ((hostPort == null) || (hostPort == 0)) {
       // Auto select host port.
       hostPort = await findAvailablePort();
     }
 
-    runCheckedSync(
-      <String>[
-        androidSdk.adbPath,
-        'forward',
-        'tcp:$hostPort',
-        'tcp:$devicePort',
-      ]);
+    runCheckedSync(device.adbCommandForDevice(
+      <String>['forward', 'tcp:$hostPort', 'tcp:$devicePort']
+    ));
 
     return hostPort;
   }
 
   Future unforward(ForwardedPort forwardedPort) async {
-    runCheckedSync(
-      <String>[
-        androidSdk.adbPath,
-        'forward',
-        '--remove',
-        'tcp:${forwardedPort.hostPort}'
-      ]);
+    runCheckedSync(device.adbCommandForDevice(
+      <String>['forward', '--remove', 'tcp:${forwardedPort.hostPort}']
+    ));
   }
 }

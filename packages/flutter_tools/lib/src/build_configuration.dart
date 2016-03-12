@@ -20,11 +20,12 @@ enum HostPlatform {
 }
 
 enum TargetPlatform {
-  android,
-  iOS,
-  iOSSimulator,
-  mac,
-  linux,
+  android_arm,
+  android_x64,
+  ios_arm,
+  ios_x64,
+  darwin_x64,
+  linux_x64,
 }
 
 HostPlatform getCurrentHostPlatform() {
@@ -38,11 +39,11 @@ HostPlatform getCurrentHostPlatform() {
 
 TargetPlatform getCurrentHostPlatformAsTarget() {
   if (Platform.isMacOS)
-    return TargetPlatform.mac;
+    return TargetPlatform.darwin_x64;
   if (Platform.isLinux)
-    return TargetPlatform.linux;
+    return TargetPlatform.linux_x64;
   printError('Unsupported host platform, defaulting to Linux');
-  return TargetPlatform.linux;
+  return TargetPlatform.linux_x64;
 }
 
 class BuildConfiguration {
@@ -68,4 +69,7 @@ class BuildConfiguration {
   final TargetPlatform targetPlatform;
   final String buildDir;
   final bool testable;
+
+  String toString() => 'type: $type, hostPlatform: $hostPlatform, '
+    'targetPlatform: $targetPlatform, buildDir: $buildDir, testable: $testable';
 }

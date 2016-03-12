@@ -23,15 +23,17 @@ String _getNameForHostPlatform(HostPlatform platform) {
 
 String _getNameForTargetPlatform(TargetPlatform platform) {
   switch (platform) {
-    case TargetPlatform.android:
+    case TargetPlatform.android_arm:
       return 'android-arm';
-    case TargetPlatform.iOS:
+    case TargetPlatform.android_x64:
+      return 'android-x64';
+    case TargetPlatform.ios_arm:
       return 'ios-arm';
-    case TargetPlatform.iOSSimulator:
+    case TargetPlatform.ios_x64:
       return 'ios-x64';
-    case TargetPlatform.mac:
+    case TargetPlatform.darwin_x64:
       return 'darwin-x64';
-    case TargetPlatform.linux:
+    case TargetPlatform.linux_x64:
       return 'linux-x64';
   }
 }
@@ -69,6 +71,8 @@ class Artifact {
     assert(false);
     return null;
   }
+
+  String toString() => 'name: $name, type: $type, platform: $platform';
 }
 
 class ArtifactStore {
@@ -77,13 +81,19 @@ class ArtifactStore {
       name: 'Sky Shell',
       fileName: 'SkyShell.apk',
       type: ArtifactType.shell,
-      targetPlatform: TargetPlatform.android
+      targetPlatform: TargetPlatform.android_arm
+    ),
+    const Artifact._(
+      name: 'Sky Shell',
+      fileName: 'SkyShell.apk',
+      type: ArtifactType.shell,
+      targetPlatform: TargetPlatform.android_x64
     ),
     const Artifact._(
       name: 'Sky Shell',
       fileName: 'sky_shell',
       type: ArtifactType.shell,
-      targetPlatform: TargetPlatform.linux
+      targetPlatform: TargetPlatform.linux_x64
     ),
     const Artifact._(
       name: 'Sky Snapshot',
@@ -101,37 +111,61 @@ class ArtifactStore {
       name: 'Flutter for Mojo',
       fileName: 'flutter.mojo',
       type: ArtifactType.mojo,
-      targetPlatform: TargetPlatform.android
+      targetPlatform: TargetPlatform.android_arm
     ),
     const Artifact._(
       name: 'Flutter for Mojo',
       fileName: 'flutter.mojo',
       type: ArtifactType.mojo,
-      targetPlatform: TargetPlatform.linux
+      targetPlatform: TargetPlatform.linux_x64
     ),
     const Artifact._(
       name: 'Compiled Java code',
       fileName: 'classes.dex.jar',
       type: ArtifactType.androidClassesJar,
-      targetPlatform: TargetPlatform.android
+      targetPlatform: TargetPlatform.android_arm
+    ),
+    const Artifact._(
+      name: 'Compiled Java code',
+      fileName: 'classes.dex.jar',
+      type: ArtifactType.androidClassesJar,
+      targetPlatform: TargetPlatform.android_x64
     ),
     const Artifact._(
       name: 'ICU data table',
       fileName: 'icudtl.dat',
       type: ArtifactType.androidIcuData,
-      targetPlatform: TargetPlatform.android
+      targetPlatform: TargetPlatform.android_arm
+    ),
+    const Artifact._(
+      name: 'ICU data table',
+      fileName: 'icudtl.dat',
+      type: ArtifactType.androidIcuData,
+      targetPlatform: TargetPlatform.android_x64
     ),
     const Artifact._(
       name: 'Key Store',
       fileName: 'chromium-debug.keystore',
       type: ArtifactType.androidKeystore,
-      targetPlatform: TargetPlatform.android
+      targetPlatform: TargetPlatform.android_arm
+    ),
+    const Artifact._(
+      name: 'Key Store',
+      fileName: 'chromium-debug.keystore',
+      type: ArtifactType.androidKeystore,
+      targetPlatform: TargetPlatform.android_x64
     ),
     const Artifact._(
       name: 'Compiled C++ code',
       fileName: 'libsky_shell.so',
       type: ArtifactType.androidLibSkyShell,
-      targetPlatform: TargetPlatform.android
+      targetPlatform: TargetPlatform.android_arm
+    ),
+    const Artifact._(
+      name: 'Compiled C++ code',
+      fileName: 'libsky_shell.so',
+      type: ArtifactType.androidLibSkyShell,
+      targetPlatform: TargetPlatform.android_x64
     ),
   ];
 
@@ -204,6 +238,7 @@ class ArtifactStore {
   }
 
   static Future<String> getPath(Artifact artifact) async {
+    assert(artifact != null);
     File cachedFile = new File(path.join(
         getBaseCacheDir().path, 'engine', artifact.platform, artifact.fileName
     ));

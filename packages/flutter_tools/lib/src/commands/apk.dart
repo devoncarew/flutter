@@ -187,6 +187,8 @@ class ApkCommand extends FlutterCommand {
     await downloadToolchain();
 
     return await buildAndroid(
+      // TODO(devoncarew): Also support building android_x86 APKs?
+      platform: TargetPlatform.android_arm,
       toolchain: toolchain,
       configs: buildConfigurations,
       enginePath: runner.enginePath,
@@ -226,7 +228,7 @@ Future<_ApkComponents> _findApkComponents(
     ];
     Iterable<Future<String>> pathFutures = artifactTypes.map(
         (ArtifactType type) => ArtifactStore.getPath(ArtifactStore.getArtifact(
-            type: type, targetPlatform: TargetPlatform.android)));
+            type: type, targetPlatform: config.targetPlatform)));
     artifactPaths = await Future.wait(pathFutures);
   }
 
@@ -364,6 +366,7 @@ bool _needsRebuild(String apkPath, String manifest) {
 }
 
 Future<int> buildAndroid({
+  TargetPlatform platform,
   Toolchain toolchain,
   List<BuildConfiguration> configs,
   String enginePath,
@@ -392,8 +395,17 @@ Future<int> buildAndroid({
   }
 
   BuildConfiguration config = configs.firstWhere(
-    (BuildConfiguration bc) => bc.targetPlatform == TargetPlatform.android
+    (BuildConfiguration bc) => bc.targetPlatform == platform,
+    orElse: () => null
   );
+
+  if (config == null) {
+    printError('No build configuration available for $platform.');
+    return 1;
+  }
+
+  printTrace('Building for $config');
+
   _ApkComponents components = await _findApkComponents(config, enginePath, manifest, resources);
   if (components == null) {
     printError('Failure building APK. Unable to find components.');
@@ -421,32 +433,27 @@ Future<int> buildAndroid({
 
 // TODO(mpcomplete): move this to Device?
 /// This is currently Android specific.
-Future<int> buildAll(
-  List<Device> devices,
+Future<int> buildForDevice(
+  Device device,
   ApplicationPackageStore applicationPackages,
   Toolchain toolchain,
   List<BuildConfiguration> configs, {
   String enginePath,
   String target: ''
 }) async {
-  for (Device device in devices) {
-    ApplicationPackage package = applicationPackages.getPackageForPlatform(device.platform);
-    if (package == null)
-      continue;
+  ApplicationPackage package = applicationPackages.getPackageForPlatform(device.platform);
+  if (package == null)
+    return 1;
 
-    // TODO(mpcomplete): Temporary hack. We only support the apk builder atm.
-    if (package != applicationPackages.android)
-      continue;
+  // TODO(mpcomplete): Temporary hack. We only support the apk builder atm.
+  if (package != applicationPackages.android)
+    return 1;
 
-    int result = await build(toolchain, configs, enginePath: enginePath, target: target);
-    if (result != 0)
-      return result;
-  }
-
-  return 0;
+  return await build(device.platform, toolchain, configs, enginePath: enginePath, target: target);
 }
 
 Future<int> build(
+  TargetPlatform platform,
   Toolchain toolchain,
   List<BuildConfiguration> configs, {
   String enginePath,
@@ -458,6 +465,7 @@ Future<int> build(
   }
 
   int result = await buildAndroid(
+    platform: platform,
     toolchain: toolchain,
     configs: configs,
     enginePath: enginePath,

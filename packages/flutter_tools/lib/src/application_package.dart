@@ -115,13 +115,14 @@ class ApplicationPackageStore {
 
   ApplicationPackage getPackageForPlatform(TargetPlatform platform) {
     switch (platform) {
-      case TargetPlatform.android:
+      case TargetPlatform.android_arm:
+      case TargetPlatform.android_x64:
         return android;
-      case TargetPlatform.iOS:
-      case TargetPlatform.iOSSimulator:
+      case TargetPlatform.ios_arm:
+      case TargetPlatform.ios_x64:
         return iOS;
-      case TargetPlatform.mac:
-      case TargetPlatform.linux:
+      case TargetPlatform.darwin_x64:
+      case TargetPlatform.linux_x64:
         return null;
     }
   }
@@ -132,8 +133,12 @@ class ApplicationPackageStore {
 
     for (BuildConfiguration config in configs) {
       switch (config.targetPlatform) {
-        case TargetPlatform.android:
-          assert(android == null);
+        case TargetPlatform.android_arm:
+        case TargetPlatform.android_x64:
+          // TODO: ???
+          // assert(android == null);
+          // TODO: This is totally wrong.
+          // android ??= AndroidApk.getCustomApk();
           android = AndroidApk.getCustomApk();
           // Fall back to the prebuilt or engine-provided apk if we can't build
           // a custom one.
@@ -145,18 +150,18 @@ class ApplicationPackageStore {
             android = new AndroidApk(localPath: localPath);
           } else {
             Artifact artifact = ArtifactStore.getArtifact(
-              type: ArtifactType.shell, targetPlatform: TargetPlatform.android);
+              type: ArtifactType.shell, targetPlatform: config.targetPlatform);
             android = new AndroidApk(localPath: await ArtifactStore.getPath(artifact));
           }
           break;
 
-        case TargetPlatform.iOS:
-        case TargetPlatform.iOSSimulator:
+        case TargetPlatform.ios_arm:
+        case TargetPlatform.ios_x64:
           iOS ??= new IOSApp.fromBuildConfiguration(config);
           break;
 
-        case TargetPlatform.mac:
-        case TargetPlatform.linux:
+        case TargetPlatform.darwin_x64:
+        case TargetPlatform.linux_x64:
           break;
       }
     }

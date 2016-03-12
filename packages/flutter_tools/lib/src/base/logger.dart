@@ -67,6 +67,7 @@ class VerboseLogger implements Logger {
   void printError(String message, [StackTrace stackTrace]) {
     _emit();
     lastMessage = new _LogMessage(_LogType.error, message, stackTrace);
+    flush();
   }
 
   void printStatus(String message) {
