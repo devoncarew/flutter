@@ -269,8 +269,7 @@ class FlutterCommandRunner extends CommandRunner {
     if (enginePath == null) {
       configs.add(new BuildConfiguration.prebuilt(
         hostPlatform: hostPlatform,
-        targetPlatform: TargetPlatform.android,
-        deviceId: globalResults['device-id']
+        targetPlatform: TargetPlatform.android
       ));
 
       if (hostPlatform == HostPlatform.linux) {
@@ -284,14 +283,12 @@ class FlutterCommandRunner extends CommandRunner {
       if (hostPlatform == HostPlatform.mac) {
         configs.add(new BuildConfiguration.prebuilt(
           hostPlatform: HostPlatform.mac,
-          targetPlatform: TargetPlatform.iOS,
-          deviceId: globalResults['device-id']
+          targetPlatform: TargetPlatform.iOS
         ));
 
         configs.add(new BuildConfiguration.prebuilt(
           hostPlatform: HostPlatform.mac,
-          targetPlatform: TargetPlatform.iOSSimulator,
-          deviceId: globalResults['device-id']
+          targetPlatform: TargetPlatform.iOSSimulator
         ));
       }
     } else {
@@ -307,8 +304,7 @@ class FlutterCommandRunner extends CommandRunner {
           hostPlatform: hostPlatform,
           targetPlatform: TargetPlatform.android,
           enginePath: enginePath,
-          buildPath: globalResults['android-debug-build-path'],
-          deviceId: globalResults['device-id']
+          buildPath: globalResults['android-debug-build-path']
         ));
 
         configs.add(new BuildConfiguration.local(
@@ -326,8 +322,7 @@ class FlutterCommandRunner extends CommandRunner {
             hostPlatform: hostPlatform,
             targetPlatform: TargetPlatform.iOS,
             enginePath: enginePath,
-            buildPath: globalResults['ios-debug-build-path'],
-            deviceId: globalResults['device-id']
+            buildPath: globalResults['ios-debug-build-path']
           ));
 
           configs.add(new BuildConfiguration.local(
@@ -335,8 +330,7 @@ class FlutterCommandRunner extends CommandRunner {
             hostPlatform: hostPlatform,
             targetPlatform: TargetPlatform.iOSSimulator,
             enginePath: enginePath,
-            buildPath: globalResults['ios-sim-debug-build-path'],
-            deviceId: globalResults['device-id']
+            buildPath: globalResults['ios-sim-debug-build-path']
           ));
         }
       }
@@ -347,8 +341,7 @@ class FlutterCommandRunner extends CommandRunner {
           hostPlatform: hostPlatform,
           targetPlatform: TargetPlatform.android,
           enginePath: enginePath,
-          buildPath: globalResults['android-release-build-path'],
-          deviceId: globalResults['device-id']
+          buildPath: globalResults['android-release-build-path']
         ));
 
         configs.add(new BuildConfiguration.local(
@@ -366,8 +359,7 @@ class FlutterCommandRunner extends CommandRunner {
             hostPlatform: hostPlatform,
             targetPlatform: TargetPlatform.iOS,
             enginePath: enginePath,
-            buildPath: globalResults['ios-release-build-path'],
-            deviceId: globalResults['device-id']
+            buildPath: globalResults['ios-release-build-path']
           ));
 
           configs.add(new BuildConfiguration.local(
@@ -375,8 +367,7 @@ class FlutterCommandRunner extends CommandRunner {
             hostPlatform: hostPlatform,
             targetPlatform: TargetPlatform.iOSSimulator,
             enginePath: enginePath,
-            buildPath: globalResults['ios-sim-release-build-path'],
-            deviceId: globalResults['device-id']
+            buildPath: globalResults['ios-sim-release-build-path']
           ));
         }
       }

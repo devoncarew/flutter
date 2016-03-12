@@ -49,7 +49,6 @@ class BuildConfiguration {
   BuildConfiguration.prebuilt({
     this.hostPlatform,
     this.targetPlatform,
-    this.deviceId,
     this.testable: false
   }) : type = BuildType.prebuilt, buildDir = null;
 
@@ -59,7 +58,6 @@ class BuildConfiguration {
     this.targetPlatform,
     String enginePath,
     String buildPath,
-    this.deviceId,
     this.testable: false
   }) : buildDir = path.normalize(path.join(enginePath, buildPath)) {
     assert(type == BuildType.debug || type == BuildType.release);
@@ -69,6 +67,5 @@ class BuildConfiguration {
   final HostPlatform hostPlatform;
   final TargetPlatform targetPlatform;
   final String buildDir;
-  final String deviceId;
   final bool testable;
 }
