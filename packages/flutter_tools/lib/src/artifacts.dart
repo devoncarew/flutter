@@ -25,6 +25,9 @@ String getNameForTargetPlatform(TargetPlatform platform) {
   switch (platform) {
     case TargetPlatform.android_arm:
       return 'android-arm';
+    // TODO: this should be x86
+    case TargetPlatform.android_x64:
+      return 'android-x64';
     case TargetPlatform.ios:
       return 'ios';
     case TargetPlatform.darwin_x64:
@@ -72,12 +75,15 @@ class Artifact {
 
 class ArtifactStore {
   static const List<Artifact> knownArtifacts = const <Artifact>[
+    // tester
     const Artifact._(
       name: 'Flutter Tester',
       fileName: 'sky_shell',
       type: ArtifactType.shell,
       targetPlatform: TargetPlatform.linux_x64
     ),
+
+    // snapshotters
     const Artifact._(
       name: 'Sky Snapshot',
       fileName: 'sky_snapshot',
@@ -90,6 +96,8 @@ class ArtifactStore {
       type: ArtifactType.snapshot,
       hostPlatform: HostPlatform.mac
     ),
+
+    // mojo
     const Artifact._(
       name: 'Flutter for Mojo',
       fileName: 'flutter.mojo',
@@ -102,6 +110,8 @@ class ArtifactStore {
       type: ArtifactType.mojo,
       targetPlatform: TargetPlatform.linux_x64
     ),
+
+    // android-arm
     const Artifact._(
       name: 'Compiled Java code',
       fileName: 'classes.dex.jar',
@@ -126,6 +136,34 @@ class ArtifactStore {
       type: ArtifactType.androidLibSkyShell,
       targetPlatform: TargetPlatform.android_arm
     ),
+
+    // android-x64
+    const Artifact._(
+      name: 'Compiled Java code',
+      fileName: 'classes.dex.jar',
+      type: ArtifactType.androidClassesJar,
+      targetPlatform: TargetPlatform.android_x64
+    ),
+    const Artifact._(
+      name: 'ICU data table',
+      fileName: 'icudtl.dat',
+      type: ArtifactType.androidIcuData,
+      targetPlatform: TargetPlatform.android_x64
+    ),
+    const Artifact._(
+      name: 'Key Store',
+      fileName: 'chromium-debug.keystore',
+      type: ArtifactType.androidKeystore,
+      targetPlatform: TargetPlatform.android_x64
+    ),
+    const Artifact._(
+      name: 'Compiled C++ code',
+      fileName: 'libsky_shell.so',
+      type: ArtifactType.androidLibSkyShell,
+      targetPlatform: TargetPlatform.android_x64
+    ),
+
+    // iOS
     const Artifact._(
       name: 'iOS Runner (Xcode Project)',
       fileName: 'FlutterXcode.zip',
@@ -202,7 +240,7 @@ class ArtifactStore {
     return cacheDir;
   }
 
-  static Future<String> getPath(Artifact artifact) async {
+  static String getPath(Artifact artifact) {
     File cachedFile = new File(path.join(
         getBaseCacheDir().path, 'engine', artifact.platform, artifact.fileName
     ));

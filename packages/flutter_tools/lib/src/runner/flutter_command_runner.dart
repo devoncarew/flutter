@@ -167,8 +167,9 @@ class FlutterCommandRunner extends CommandRunner {
   @override
   Future<dynamic> run(Iterable<String> args) {
     return super.run(args).then((dynamic result) {
-      logger.flush();
       return result;
+    }).whenComplete(() {
+      logger.flush();
     });
   }
 
@@ -263,6 +264,11 @@ class FlutterCommandRunner extends CommandRunner {
       configs.add(new BuildConfiguration.prebuilt(
         hostPlatform: hostPlatform,
         targetPlatform: TargetPlatform.android_arm
+      ));
+
+      configs.add(new BuildConfiguration.prebuilt(
+        hostPlatform: hostPlatform,
+        targetPlatform: TargetPlatform.android_x64
       ));
 
       if (hostPlatform == HostPlatform.linux) {

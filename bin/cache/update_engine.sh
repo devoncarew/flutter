@@ -57,6 +57,8 @@ if [ ! -f "$ENGINE_STAMP_PATH" ] || [ "$ENGINE_VERSION" != `cat "$ENGINE_STAMP_P
 
   download_artifacts android-arm
 
+  download_artifacts android-x64
+
   case "$(uname -s)" in
     Darwin)
       download_artifacts darwin-x64

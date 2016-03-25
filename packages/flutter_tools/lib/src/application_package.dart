@@ -109,6 +109,7 @@ class ApplicationPackageStore {
   ApplicationPackage getPackageForPlatform(TargetPlatform platform) {
     switch (platform) {
       case TargetPlatform.android_arm:
+      case TargetPlatform.android_x64:
         return android;
       case TargetPlatform.ios:
         return iOS;
@@ -125,8 +126,8 @@ class ApplicationPackageStore {
     for (BuildConfiguration config in configs) {
       switch (config.targetPlatform) {
         case TargetPlatform.android_arm:
-          assert(android == null);
-          android = new AndroidApk.fromBuildConfiguration(config);
+        case TargetPlatform.android_x64:
+          android ??= new AndroidApk.fromBuildConfiguration(config);
           break;
 
         case TargetPlatform.ios:
