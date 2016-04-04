@@ -16,6 +16,7 @@ import 'package:path/path.dart' as path;
 class BuildIOSCommand extends FlutterCommand {
   BuildIOSCommand() {
     argParser.addFlag('simulator', help: 'Build for the iOS simulator instead of the device');
+    usesPubOption();
   }
 
   @override
