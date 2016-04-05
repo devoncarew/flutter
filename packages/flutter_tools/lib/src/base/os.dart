@@ -66,7 +66,10 @@ class _WindowsUtils extends OperatingSystemUtils {
 
   @override
   File which(String execName) {
-    throw new UnimplementedError('_WindowsUtils.which');
+    ProcessResult result = Process.runSync('where', <String>[execName]);
+    if (result.exitCode != 0)
+      return null;
+    return new File(result.stdout.trim().split('\n').first.trim());
   }
 }
 
