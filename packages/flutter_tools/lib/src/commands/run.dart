@@ -173,13 +173,16 @@ Future<int> startApp(
     return 1;
   }
 
-  if (install) {
+  // TODO(devoncarew): We shouldn't have to do type checks here.
+  if (install && device is AndroidDevice) {
     printTrace('Running build command.');
-    int result = await buildForDevice(
-      device, applicationPackages, toolchain, configs,
+
+    int result = await buildApk(
+      device.platform, toolchain, configs,
       enginePath: enginePath,
       target: target
     );
+
     if (result != 0)
       return result;
   }

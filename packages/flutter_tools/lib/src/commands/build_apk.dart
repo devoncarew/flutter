@@ -8,20 +8,20 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 
 import '../android/android_sdk.dart';
-import '../application_package.dart';
 import '../artifacts.dart';
 import '../base/file_system.dart' show ensureDirectoryExists;
 import '../base/os.dart';
 import '../base/process.dart';
 import '../base/utils.dart';
 import '../build_configuration.dart';
-import '../device.dart';
 import '../flx.dart' as flx;
 import '../globals.dart';
 import '../runner/flutter_command.dart';
 import '../services.dart';
 import '../toolchain.dart';
 import 'run.dart';
+
+export '../android/android_device.dart' show AndroidDevice;
 
 const String _kDefaultAndroidManifestPath = 'android/AndroidManifest.xml';
 const String _kDefaultOutputPath = 'build/app.apk';
@@ -138,37 +138,48 @@ class ApkKeystoreInfo {
 
 class BuildApkCommand extends FlutterCommand {
   BuildApkCommand() {
+    argParser.addFlag('develop',
+      negatable: false,
+      help: 'Build a development version of your app (the default).');
+    argParser.addFlag('deploy',
+      negatable: false,
+      help: 'Build a deployable version of your app.');
+
     usesTargetOption();
-    argParser.addOption('manifest',
-        abbr: 'm',
-        defaultsTo: _kDefaultAndroidManifestPath,
-        help: 'Android manifest XML file.');
-    argParser.addOption('resources',
-        abbr: 'r',
-        help: 'Resources directory path.');
-    argParser.addOption('output-file',
-        abbr: 'o',
-        defaultsTo: _kDefaultOutputPath,
-        help: 'Output APK file.');
-    argParser.addOption('flx',
-        abbr: 'f',
-        help: 'Path to the FLX file. If this is not provided, an FLX will be built.');
-    argParser.addOption('keystore',
-        help: 'Path to the keystore used to sign the app.');
-    argParser.addOption('keystore-password',
-        help: 'Password used to access the keystore.');
-    argParser.addOption('keystore-key-alias',
-        help: 'Alias of the entry within the keystore.');
-    argParser.addOption('keystore-key-password',
-        help: 'Password for the entry within the keystore.');
     usesPubOption();
+
+    argParser.addOption('manifest',
+      abbr: 'm',
+      defaultsTo: _kDefaultAndroidManifestPath,
+      help: 'Android manifest XML file.');
+    argParser.addOption('resources',
+      abbr: 'r',
+      help: 'Resources directory path.');
+    argParser.addOption('output-file',
+      abbr: 'o',
+      defaultsTo: _kDefaultOutputPath,
+      help: 'Output APK file.');
+    argParser.addOption('flx',
+      abbr: 'f',
+      help: 'Path to the FLX file. If this is not provided, an FLX will be built.');
+    argParser.addOption('keystore',
+      help: 'Path to the keystore used to sign the app.');
+    argParser.addOption('keystore-password',
+      help: 'Password used to access the keystore.');
+    argParser.addOption('keystore-key-alias',
+      help: 'Alias of the entry within the keystore.');
+    argParser.addOption('keystore-key-password',
+      help: 'Password for the entry within the keystore.');
   }
 
   @override
   final String name = 'apk';
 
   @override
-  final String description = 'Build an Android APK file from your app.';
+  final String description = 'Build an Android APK file from your app.\n\n'
+    'This command can build develop and deploy versions of your application. \'develop\' builds support\n'
+    'debugging and a quick development cycle. \'deploy\' builds don\'t support debugging, are AOT compiled,\n'
+    'and are suitable for deploying to app stores.';
 
   @override
   Future<int> runInProject() async {
@@ -184,6 +195,8 @@ class BuildApkCommand extends FlutterCommand {
       printError('Try re-installing or updating your Android SDK.');
       return 1;
     }
+
+    bool buildForDeploy = argResults['deploy'];
 
     // TODO(devoncarew): This command should take an arg for the output type (arm / x64).
 
@@ -203,14 +216,17 @@ class BuildApkCommand extends FlutterCommand {
         password: argResults['keystore-password'],
         keyAlias: argResults['keystore-key-alias'],
         keyPassword: argResults['keystore-key-password']
-      )
+      ),
+      buildForDeploy: buildForDeploy
     );
   }
 }
 
 Future<_ApkComponents> _findApkComponents(
-  BuildConfiguration config, String enginePath, String manifest, String resources
+  BuildConfiguration config, String enginePath, String manifest, String resources, bool buildForDeploy
 ) async {
+  // TODO(devoncarew): Get the right artifacts for [buildForDeploy].
+
   List<String> artifactPaths;
   if (enginePath != null) {
     // TODO(devoncarew): Support x64.
@@ -227,13 +243,12 @@ Future<_ApkComponents> _findApkComponents(
       ArtifactType.androidLibSkyShell,
       ArtifactType.androidKeystore,
     ];
-    Iterable<String> pathFutures = artifactTypes.map((ArtifactType type) {
+    artifactPaths = artifactTypes.map((ArtifactType type) {
       return ArtifactStore.getPath(ArtifactStore.getArtifact(
         type: type,
         targetPlatform: config.targetPlatform
       ));
-    });
-    artifactPaths = pathFutures.toList();
+    }).toList();
   }
 
   _ApkComponents components = new _ApkComponents();
@@ -263,9 +278,13 @@ int _buildApk(
   _ApkComponents components,
   String flxPath,
   ApkKeystoreInfo keystore,
-  String outputFile
+  String outputFile,
+  bool buildForDeploy
 ) {
   Directory tempDir = Directory.systemTemp.createTempSync('flutter_tools');
+
+  // TODO(devoncarew): Use the [buildForDeploy] param.
+  printTrace('Building APK; buildForDeploy: $buildForDeploy.');
 
   try {
     _ApkBuilder builder = new _ApkBuilder(androidSdk.latestVersion);
@@ -382,7 +401,8 @@ Future<int> buildAndroid(
   String outputFile: _kDefaultOutputPath,
   String target,
   String flxPath,
-  ApkKeystoreInfo keystore
+  ApkKeystoreInfo keystore,
+  bool buildForDeploy: false
 }) async {
   // Validate that we can find an android sdk.
   if (androidSdk == null) {
@@ -413,7 +433,7 @@ Future<int> buildAndroid(
   }
 
   BuildConfiguration config = configs.firstWhere((BuildConfiguration bc) => bc.targetPlatform == platform);
-  _ApkComponents components = await _findApkComponents(config, enginePath, manifest, resources);
+  _ApkComponents components = await _findApkComponents(config, enginePath, manifest, resources, buildForDeploy);
 
   if (components == null) {
     printError('Failure building APK. Unable to find components.');
@@ -429,7 +449,7 @@ Future<int> buildAndroid(
       return 1;
     }
 
-    return _buildApk(platform, components, flxPath, keystore, outputFile);
+    return _buildApk(platform, components, flxPath, keystore, outputFile, buildForDeploy);
   } else {
     // Find the path to the main Dart file; build the FLX.
     String mainPath = findMainDartFile(target);
@@ -438,40 +458,17 @@ Future<int> buildAndroid(
         mainPath: mainPath,
         includeRobotoFonts: false);
 
-    return _buildApk(platform, components, localBundlePath, keystore, outputFile);
+    return _buildApk(platform, components, localBundlePath, keystore, outputFile, buildForDeploy);
   }
 }
 
-// TODO(mpcomplete): move this to Device?
-/// This is currently Android specific.
-Future<int> buildForDevice(
-  Device device,
-  ApplicationPackageStore applicationPackages,
-  Toolchain toolchain,
-  List<BuildConfiguration> configs, {
-  String enginePath,
-  String target: ''
-}) async {
-  ApplicationPackage package = applicationPackages.getPackageForPlatform(device.platform);
-  if (package == null)
-    return 0;
-
-  // TODO(mpcomplete): Temporary hack. We only support the apk builder atm.
-  if (package == applicationPackages.android) {
-    int result = await build(device.platform, toolchain, configs, enginePath: enginePath, target: target);
-    if (result != 0)
-      return result;
-  }
-
-  return 0;
-}
-
-Future<int> build(
+Future<int> buildApk(
   TargetPlatform platform,
   Toolchain toolchain,
   List<BuildConfiguration> configs, {
   String enginePath,
-  String target
+  String target,
+  bool buildForDeploy: false
 }) async {
   if (!FileSystemEntity.isFileSync(_kDefaultAndroidManifestPath)) {
     printError('Cannot build APK. Missing $_kDefaultAndroidManifestPath.');
@@ -484,7 +481,8 @@ Future<int> build(
     configs: configs,
     enginePath: enginePath,
     force: false,
-    target: target
+    target: target,
+    buildForDeploy: buildForDeploy
   );
 
   return result;
