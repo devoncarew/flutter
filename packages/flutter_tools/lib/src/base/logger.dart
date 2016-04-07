@@ -222,8 +222,10 @@ class _AnsiStatus extends Status {
   bool live = true;
 
   void _callback(Timer timer) {
-    stdout.write('\b${_progress[index]}');
-    index = ++index % _progress.length;
+    if (live) {
+      stdout.write('\b${_progress[index]}');
+      index = ++index % _progress.length;
+    }
   }
 
   @override
@@ -236,7 +238,7 @@ class _AnsiStatus extends Status {
       double seconds = stopwatch.elapsedMilliseconds / 1000.0;
       print('\b\b\b\b${seconds.toStringAsFixed(1)}s');
     } else {
-      print('\b');
+      print('\b ');
     }
 
     timer.cancel();
@@ -248,7 +250,7 @@ class _AnsiStatus extends Status {
       return;
     live = false;
 
-    print('\b');
+    print('\b ');
     timer.cancel();
   }
 }

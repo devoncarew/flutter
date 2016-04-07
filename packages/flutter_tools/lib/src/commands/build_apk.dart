@@ -11,6 +11,7 @@ import '../android/android_sdk.dart';
 import '../application_package.dart';
 import '../artifacts.dart';
 import '../base/file_system.dart' show ensureDirectoryExists;
+import '../base/logger.dart';
 import '../base/os.dart';
 import '../base/process.dart';
 import '../base/utils.dart';
@@ -420,25 +421,29 @@ Future<int> buildAndroid(
     return 1;
   }
 
-  printStatus('Building APK...');
+  Status status = logger.startProgress('Building APK...');
 
-  if (flxPath != null && flxPath.isNotEmpty) {
-    if (!FileSystemEntity.isFileSync(flxPath)) {
-      printError('FLX does not exist: $flxPath');
-      printError('(Omit the --flx option to build the FLX automatically)');
-      return 1;
+  try {
+    if (flxPath != null && flxPath.isNotEmpty) {
+      if (!FileSystemEntity.isFileSync(flxPath)) {
+        printError('FLX does not exist: $flxPath');
+        printError('(Omit the --flx option to build the FLX automatically)');
+        return 1;
+      }
+
+      return _buildApk(platform, components, flxPath, keystore, outputFile);
+    } else {
+      // Find the path to the main Dart file; build the FLX.
+      String mainPath = findMainDartFile(target);
+      String localBundlePath = await flx.buildFlx(
+          toolchain,
+          mainPath: mainPath,
+          includeRobotoFonts: false);
+
+      return _buildApk(platform, components, localBundlePath, keystore, outputFile);
     }
-
-    return _buildApk(platform, components, flxPath, keystore, outputFile);
-  } else {
-    // Find the path to the main Dart file; build the FLX.
-    String mainPath = findMainDartFile(target);
-    String localBundlePath = await flx.buildFlx(
-        toolchain,
-        mainPath: mainPath,
-        includeRobotoFonts: false);
-
-    return _buildApk(platform, components, localBundlePath, keystore, outputFile);
+  } finally {
+    status.stop(showElapsedTime: true);
   }
 }
 

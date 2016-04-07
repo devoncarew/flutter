@@ -247,10 +247,13 @@ class AndroidDevice extends Device {
     if (route != null)
       cmd.addAll(<String>['--es', 'route', route]);
     cmd.add(apk.launchActivity);
-    String result = runCheckedSync(cmd);
+
+    printTrace(cmd.join(' '));
+    ProcessResult result = await Process.run(cmd.first, cmd.sublist(1));
+    String stdout = result.stdout;
     // This invocation returns 0 even when it fails.
-    if (result.contains('Error: ')) {
-      printError(result.trim());
+    if (result.exitCode != 0 || stdout.contains('Error: ')) {
+      printError(stdout.trim());
       return false;
     }
 

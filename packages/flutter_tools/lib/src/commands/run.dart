@@ -9,6 +9,7 @@ import 'package:path/path.dart' as path;
 
 import '../application_package.dart';
 import '../base/common.dart';
+import '../base/logger.dart';
 import '../build_configuration.dart';
 import '../dart/pub.dart';
 import '../device.dart';
@@ -211,7 +212,7 @@ Future<int> startApp(
   if (traceStartup != null)
     platformArgs['trace-startup'] = traceStartup;
 
-  printStatus('Running ${_getDisplayPath(mainPath)} on ${device.name}...');
+  Status status = logger.startProgress('Running ${_getDisplayPath(mainPath)} on ${device.name}...');
 
   bool result = await device.startApp(
     package,
@@ -224,6 +225,8 @@ Future<int> startApp(
     observatoryPort: debugPort,
     platformArgs: platformArgs
   );
+
+  status.stop(showElapsedTime: result);
 
   if (!result)
     printError('Error running application on ${device.name}.');

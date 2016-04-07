@@ -11,6 +11,7 @@ import 'package:path/path.dart' as path;
 import '../application_package.dart';
 import '../artifacts.dart';
 import '../base/context.dart';
+import '../base/logger.dart';
 import '../base/process.dart';
 import '../globals.dart';
 import '../services.dart';
@@ -149,9 +150,11 @@ Future<bool> buildIOSXcodeProject(ApplicationPackage app,
 
   printTrace(commands.join(' '));
 
-  ProcessResult result = Process.runSync(
+  Status status = logger.startProgress('Building with XCode...');
+  ProcessResult result = await Process.run(
     commands.first, commands.sublist(1), workingDirectory: app.localPath
   );
+  status.stop(showElapsedTime: true);
 
   if (result.exitCode != 0) {
     if (result.stderr.isNotEmpty)

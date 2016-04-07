@@ -276,6 +276,7 @@ class SimControl {
   bool _isAnyConnected() => getConnectedDevices().isNotEmpty;
 
   void install(String deviceId, String appPath) {
+    printStatus('Installing on device...');
     runCheckedSync([_xcrunPath, 'simctl', 'install', deviceId, appPath]);
   }
 
