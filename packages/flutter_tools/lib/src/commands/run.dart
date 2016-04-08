@@ -169,7 +169,8 @@ Future<int> startApp(
     int result = await buildApk(
       device.platform, toolchain, configs,
       enginePath: enginePath,
-      target: target
+      target: target,
+      buildForDeploy: false
     );
 
     if (result != 0)
