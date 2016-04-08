@@ -130,11 +130,11 @@ class LeaveBehindDemoState extends State<LeaveBehindDemo> {
     return new Scaffold(
       key: _scaffoldKey,
       appBar: new AppBar(
-        title: new Text('Swipe Items to Dismiss'),
+        title: new Text('Swipe items to dismiss'),
         actions: <Widget>[
           new PopupMenuButton<LeaveBehindDemoAction>(
             onSelected: handleDemoAction,
-            items: <PopupMenuEntry<LeaveBehindDemoAction>>[
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<LeaveBehindDemoAction>>[
               new PopupMenuItem<LeaveBehindDemoAction>(
                 value: LeaveBehindDemoAction.reset,
                 child: new Text('Reset the list')

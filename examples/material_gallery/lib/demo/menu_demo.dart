@@ -64,14 +64,14 @@ class MenuDemoState extends State<MenuDemo> {
         actions: <Widget>[
           new PopupMenuButton<String>(
             onSelected: showMenuSelection,
-            items: <PopupMenuItem<String>>[
+            itemBuilder: (BuildContext context) => <PopupMenuItem<String>>[
               new PopupMenuItem<String>(
-                value: 'AppBar Menu',
-                child: new Text('AppBar Menu')
+                value: 'Toolbar menu',
+                child: new Text('Toolbar menu')
               ),
               new PopupMenuItem<String>(
-                value: 'Right Here',
-                child: new Text('Right Here')
+                value: 'Right here',
+                child: new Text('Right here')
               ),
               new PopupMenuItem<String>(
                 value: 'Hooray!',
@@ -91,7 +91,7 @@ class MenuDemoState extends State<MenuDemo> {
             title: new Text('An item with a context menu button'),
             trailing: new PopupMenuButton<String>(
               onSelected: showMenuSelection,
-              items: <PopupMenuItem<String>>[
+              itemBuilder: (BuildContext context) => <PopupMenuItem<String>>[
                 new PopupMenuItem<String>(
                   value: _simpleValue1,
                   child: new Text('Context menu item one')
@@ -114,7 +114,7 @@ class MenuDemoState extends State<MenuDemo> {
             title: new Text('An item with a sectioned menu'),
             trailing: new PopupMenuButton<String>(
               onSelected: showMenuSelection,
-              items: <PopupMenuEntry<String>>[
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                 new PopupMenuItem<String>(
                   value: 'Preview',
                   child: new ListItem(
@@ -133,7 +133,7 @@ class MenuDemoState extends State<MenuDemo> {
                   value: 'Get Link',
                   child: new ListItem(
                     leading: new Icon(icon: Icons.link),
-                    title: new Text('Get Link')
+                    title: new Text('Get link')
                   )
                 ),
                 new PopupMenuDivider(),
@@ -157,7 +157,7 @@ class MenuDemoState extends State<MenuDemo> {
               title: new Text('An item with a simple menu'),
               subtitle: new Text(_simpleValue)
             ),
-            items: <PopupMenuItem<String>>[
+            itemBuilder: (BuildContext context) => <PopupMenuItem<String>>[
               new PopupMenuItem<String>(
                 value: _simpleValue1,
                 child: new Text(_simpleValue1)
@@ -178,7 +178,7 @@ class MenuDemoState extends State<MenuDemo> {
             title: new Text('An item with a checklist menu'),
             trailing: new PopupMenuButton<String>(
               onSelected: showCheckedMenuSelections,
-              items: <PopupMenuItem<String>>[
+              itemBuilder: (BuildContext context) => <PopupMenuItem<String>>[
                 new CheckedPopupMenuItem<String>(
                   value: _checkedValue1,
                   checked: isChecked(_checkedValue1),

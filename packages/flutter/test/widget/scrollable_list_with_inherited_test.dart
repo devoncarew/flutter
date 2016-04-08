@@ -23,12 +23,12 @@ Widget buildCard(BuildContext context, int index) {
 
 Widget buildFrame() {
   return new LazyBlock(
-    delegate: new LazyBlockBuilder(buildCard)
+    delegate: new LazyBlockBuilder(builder: buildCard)
   );
 }
 
 void main() {
-  test('MixedViewport is a build function (smoketest)', () {
+  test('LazyBlock is a build function (smoketest)', () {
     testWidgets((WidgetTester tester) {
       tester.pumpWidget(buildFrame());
       expect(tester.findText('0'), isNotNull);

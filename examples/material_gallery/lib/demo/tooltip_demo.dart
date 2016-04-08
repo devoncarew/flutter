@@ -19,8 +19,7 @@ class TooltipDemo extends StatelessWidget {
       ),
       body: new Builder(
         builder: (BuildContext context) {
-          return new Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          return new Block(
             children: <Widget>[
               new Text(_introText, style: theme.textTheme.subhead),
               new Row(
@@ -34,7 +33,7 @@ class TooltipDemo extends StatelessWidget {
                       color: theme.primaryColor
                     )
                   ),
-                  new Text(' icon', style: theme.textTheme.subhead)
+                  new Text(' icon.', style: theme.textTheme.subhead)
                 ]
               ),
               new Center(
@@ -45,7 +44,7 @@ class TooltipDemo extends StatelessWidget {
                   tooltip: 'place a phone call',
                   onPressed: () {
                     Scaffold.of(context).showSnackBar(new SnackBar(
-                       content: new Text('That was an ordinary tap')
+                       content: new Text('That was an ordinary tap.')
                     ));
                   }
                 )

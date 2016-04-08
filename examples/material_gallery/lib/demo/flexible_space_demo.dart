@@ -110,28 +110,26 @@ class FlexibleSpaceDemoState extends State<FlexibleSpaceDemo> {
                   _appBarBehavior = value;
                 });
               },
-              items: <PopupMenuItem<AppBarBehavior>>[
+              itemBuilder: (BuildContext context) => <PopupMenuItem<AppBarBehavior>>[
                 new PopupMenuItem<AppBarBehavior>(
                   value: AppBarBehavior.scroll,
-                  child: new Text('AppBar scrolls away')
+                  child: new Text('Toolbar scrolls away')
                 ),
                 new PopupMenuItem<AppBarBehavior>(
                   value: AppBarBehavior.under,
-                  child: new Text('AppBar stays put')
+                  child: new Text('Toolbar stays put')
                 )
               ]
             )
           ],
-          flexibleSpace: (BuildContext context) {
-            return new FlexibleSpaceBar(
-              title : new Text('Ali Connors'),
-              image: new AssetImage(
-                name: 'packages/flutter_gallery_assets/ali_connors.png',
-                fit: ImageFit.cover,
-                height: _appBarHeight
-              )
-            );
-          }
+          flexibleSpace: new FlexibleSpaceBar(
+            title : new Text('Ali Connors'),
+            image: new AssetImage(
+              name: 'packages/flutter_gallery_assets/ali_connors.png',
+              fit: ImageFit.cover,
+              height: _appBarHeight
+            )
+          )
         ),
         body: new Block(
           scrollableKey: _scrollableKey,

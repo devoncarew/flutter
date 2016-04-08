@@ -21,6 +21,7 @@ class ScrollableList extends Scrollable {
     SnapOffsetCallback snapOffsetCallback,
     this.itemExtent,
     this.itemsWrap: false,
+    this.clampOverscrolls: false,
     this.padding,
     this.scrollableListPainter,
     this.children
@@ -37,6 +38,7 @@ class ScrollableList extends Scrollable {
 
   final double itemExtent;
   final bool itemsWrap;
+  final bool clampOverscrolls;
   final EdgeInsets padding;
   final ScrollableListPainter scrollableListPainter;
   final Iterable<Widget> children;
@@ -76,16 +78,13 @@ class _ScrollableListState extends ScrollableState<ScrollableList> {
   }
 
   @override
-  void dispatchOnScrollEnd() {
-    super.dispatchOnScrollEnd();
-    config.scrollableListPainter?.scrollEnded();
-  }
-
-  @override
   Widget buildContent(BuildContext context) {
+    final double listScrollOffset = config.clampOverscrolls
+      ? scrollOffset.clamp(scrollBehavior.minScrollOffset, scrollBehavior.maxScrollOffset)
+      : scrollOffset;
     return new ListViewport(
       onExtentsChanged: _handleExtentsChanged,
-      scrollOffset: scrollOffset,
+      scrollOffset: listScrollOffset,
       mainAxis: config.scrollDirection,
       anchor: config.scrollAnchor,
       itemExtent: config.itemExtent,
@@ -192,8 +191,8 @@ class _VirtualListViewportElement extends VirtualViewportElement {
     super.updateRenderObject(oldWidget);
   }
 
-  double _contentExtent;
-  double _containerExtent;
+  double _lastReportedContentExtent;
+  double _lastReportedContainerExtent;
 
   @override
   void layout(BoxConstraints constraints) {
@@ -253,10 +252,10 @@ class _VirtualListViewportElement extends VirtualViewportElement {
 
     super.layout(constraints);
 
-    if (contentExtent != _contentExtent || containerExtent != _containerExtent) {
-      _contentExtent = contentExtent;
-      _containerExtent = containerExtent;
-      widget.onExtentsChanged(_contentExtent, _containerExtent);
+    if (contentExtent != _lastReportedContentExtent || containerExtent != _lastReportedContainerExtent) {
+      _lastReportedContentExtent = contentExtent;
+      _lastReportedContainerExtent = containerExtent;
+      widget.onExtentsChanged(_lastReportedContentExtent, _lastReportedContainerExtent);
     }
   }
 }

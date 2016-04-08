@@ -1158,6 +1158,9 @@ abstract class Element implements BuildContext {
     return renderObjectAncestor?.renderObject;
   }
 
+  /// Calls visitor for each ancestor element.
+  ///
+  /// Continues until visitor reaches the root or until visitor returns false.
   @override
   void visitAncestorElements(bool visitor(Element element)) {
     Element ancestor = _parent;
@@ -1241,6 +1244,11 @@ class ErrorWidget extends LeafRenderObjectWidget {
 
   @override
   RenderBox createRenderObject(BuildContext context) => new RenderErrorBox(message);
+
+  @override
+  void debugFillDescription(List<String> description) {
+    description.add('message: ' + _stringify(message));
+  }
 }
 
 /// Base class for instantiations of widgets that have builders and can be

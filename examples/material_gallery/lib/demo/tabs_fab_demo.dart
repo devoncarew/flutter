@@ -31,7 +31,7 @@ class TabsFabDemo extends StatefulWidget {
 }
 
 class _TabsFabDemoState extends State<TabsFabDemo> {
-  final GlobalKey scaffoldKey = new GlobalKey();
+  final GlobalKey<ScaffoldState> scaffoldKey = new GlobalKey<ScaffoldState>();
   final List<_Page> pages = <_Page>[
     new _Page(label: 'Blue', colors: Colors.indigo, icon: Icons.add),
     new _Page(label: 'Eco', colors: Colors.green, icon: Icons.create),
@@ -97,7 +97,7 @@ class _TabsFabDemoState extends State<TabsFabDemo> {
       child: new Scaffold(
         key: scaffoldKey,
         appBar: new AppBar(
-          title: new Text("FAB per Tab"),
+          title: new Text('FAB per tab'),
           tabBar: new TabBar<_Page>(
             labels: new Map<_Page, TabLabel>.fromIterable(pages, value: (_Page page) => page.tabLabel)
           )
