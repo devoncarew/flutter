@@ -1013,9 +1013,9 @@ class Viewport extends SingleChildRenderObjectWidget {
 
   /// The direction in which the child is permitted to be larger than the viewport
   ///
-  /// If the viewport is scrollable in a particular direction (e.g., vertically),
-  /// the child is given layout constraints that are fully unconstrainted in
-  /// that direction (e.g., the child can be as tall as it wants).
+  /// The child is given layout constraints that are fully unconstrainted along
+  /// the main axis (e.g., the child can be as tall as it wants if the main axis
+  /// is vertical).
   final Axis mainAxis;
 
   final ViewportAnchor anchor;
@@ -1025,6 +1025,7 @@ class Viewport extends SingleChildRenderObjectWidget {
   /// Often used to paint scroll bars.
   final RenderObjectPainter overlayPainter;
 
+  /// Called when the interior or exterior dimensions of the viewport change.
   final ViewportDimensionsChangeCallback onPaintOffsetUpdateNeeded;
 
   @override
@@ -1447,8 +1448,8 @@ class FixedColumnCountGrid extends GridRenderObjectWidgetBase {
     Key key,
     List<Widget> children: _emptyWidgetList,
     this.columnCount,
-    this.columnSpacing,
-    this.rowSpacing,
+    this.columnSpacing: 0.0,
+    this.rowSpacing: 0.0,
     this.tileAspectRatio: 1.0,
     this.padding: EdgeInsets.zero
   }) : super(key: key, children: children) {
@@ -1490,8 +1491,8 @@ class MaxTileWidthGrid extends GridRenderObjectWidgetBase {
     Key key,
     List<Widget> children: _emptyWidgetList,
     this.maxTileWidth,
-    this.columnSpacing,
-    this.rowSpacing,
+    this.columnSpacing: 0.0,
+    this.rowSpacing: 0.0,
     this.tileAspectRatio: 1.0,
     this.padding: EdgeInsets.zero
   }) : super(key: key, children: children) {
@@ -2452,6 +2453,11 @@ class Listener extends SingleChildRenderObjectWidget {
 class RepaintBoundary extends SingleChildRenderObjectWidget {
   RepaintBoundary({ Key key, Widget child }) : super(key: key, child: child);
 
+  factory RepaintBoundary.wrap(Widget child, int childIndex) {
+    Key key = child.key != null ? new ValueKey<Key>(child.key) : new ValueKey<int>(childIndex);
+    return new RepaintBoundary(key: key, child: child);
+  }
+
   @override
   RenderRepaintBoundary createRenderObject(BuildContext context) => new RenderRepaintBoundary();
 }
@@ -2610,12 +2616,22 @@ class MetaData extends SingleChildRenderObjectWidget {
   }
 }
 
+/// Always builds the given child.
+///
+/// Useful for attaching a key to an existing widget.
 class KeyedSubtree extends StatelessWidget {
+  /// Creates a widget that always builds the given child.
   KeyedSubtree({ Key key, this.child })
     : super(key: key);
 
   /// The widget below this widget in the tree.
   final Widget child;
+
+  /// Creates a KeyedSubtree for child with a key that's based on the child's existing key or childIndex.
+  factory KeyedSubtree.wrap(Widget child, int childIndex) {
+    Key key = child.key != null ? new ValueKey<Key>(child.key) : new ValueKey<int>(childIndex);
+    return new KeyedSubtree(key: key, child: child);
+  }
 
   /// Wrap each item in a KeyedSubtree whose key is based on the item's existing key or
   /// its list index + baseIndex.
@@ -2625,18 +2641,14 @@ class KeyedSubtree extends StatelessWidget {
 
     List<Widget> itemsWithUniqueKeys = <Widget>[];
     int itemIndex = baseIndex;
-    for(Widget item in items) {
-      itemsWithUniqueKeys.add(new KeyedSubtree(
-        key: item.key != null ? new ValueKey<Key>(item.key) : new ValueKey<int>(itemIndex),
-        child: item
-      ));
+    for (Widget item in items) {
+      itemsWithUniqueKeys.add(new KeyedSubtree.wrap(item, itemIndex));
       itemIndex += 1;
     }
 
     assert(!debugItemsHaveDuplicateKeys(itemsWithUniqueKeys));
     return itemsWithUniqueKeys;
   }
-
 
   @override
   Widget build(BuildContext context) => child;

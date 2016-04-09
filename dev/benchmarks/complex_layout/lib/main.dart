@@ -49,6 +49,19 @@ class ComplexLayout extends StatefulWidget {
 
 }
 
+class FancyItemDelegate extends LazyBlockDelegate {
+  @override
+  Widget buildItem(BuildContext context, int index) {
+    if (index % 2 == 0)
+      return new FancyImageItem(index, key: new Key("Item $index"));
+    else
+      return new FancyGalleryItem(index, key: new Key("Item $index"));
+  }
+
+  @override
+  bool shouldRebuild(FancyItemDelegate oldDelegate) => false;
+}
+
 class ComplexLayoutState extends State<ComplexLayout> {
   @override
   Widget build(BuildContext context) {
@@ -70,14 +83,9 @@ class ComplexLayoutState extends State<ComplexLayout> {
       body: new Column(
         children: <Widget>[
           new Flexible(
-            child: new ScrollableMixedWidgetList(
+            child: new LazyBlock(
               key: new Key("main-scroll"),
-              builder: (BuildContext context, int index) {
-                if (index % 2 == 0)
-                  return new FancyImageItem(index, key: new Key("Item $index"));
-                else
-                  return new FancyGalleryItem(index, key: new Key("Item $index"));
-              }
+              delegate: new FancyItemDelegate()
             )
           ),
           new BottomBar()
@@ -93,7 +101,7 @@ class TopBarMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return new PopupMenuButton<String>(
       onSelected: (String value) { print("Selected: $value"); },
-      items: <PopupMenuItem<String>>[
+      itemBuilder: (BuildContext context) => <PopupMenuItem<String>>[
         new PopupMenuItem<String>(
           value: "Friends",
           child: new MenuItemWithIcon(Icons.people, "Friends", "5 new")

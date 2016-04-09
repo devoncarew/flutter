@@ -262,11 +262,6 @@ class AppDomain extends Domain {
     Directory.current = new Directory(projectDirectory);
 
     try {
-      await Future.wait([
-        command.downloadToolchain(),
-        command.downloadApplicationPackages(),
-      ], eagerError: true);
-
       int result = await startApp(
         device,
         command.applicationPackages,
@@ -304,11 +299,6 @@ class AppDomain extends Domain {
     Directory.current = new Directory(projectDirectory);
 
     try {
-      await Future.wait([
-        command.downloadToolchain(),
-        command.downloadApplicationPackages(),
-      ], eagerError: true);
-
       ApplicationPackage app = command.applicationPackages.getPackageForPlatform(device.platform);
       return device.stopApp(app);
     } finally {
@@ -421,6 +411,12 @@ class NotifyingLogger extends Logger {
   @override
   void printTrace(String message) {
     // This is a lot of traffic to send over the wire.
+  }
+
+  @override
+  Status startProgress(String message) {
+    printStatus(message);
+    return new Status();
   }
 }
 

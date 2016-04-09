@@ -33,8 +33,12 @@ const TextStyle _kLabelStyle = const TextStyle(
 /// See also:
 ///
 ///  * [CircleAvatar]
-///  * https://www.google.com/design/spec/components/chips.html
+///  * <https://www.google.com/design/spec/components/chips.html>
 class Chip extends StatelessWidget {
+  /// Creates a material design chip.
+  ///
+  ///  * [onDeleted] determines whether the chip has a delete button. This
+  ///    callback runs when the delete button is pressed.
   const Chip({
     Key key,
     this.avatar,

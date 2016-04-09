@@ -21,18 +21,14 @@ Widget buildCard(BuildContext context, int index) {
   );
 }
 
-InvalidatorCallback invalidator;
-
 Widget buildFrame() {
-  return new ScrollableMixedWidgetList(
-    builder: buildCard,
-    token: items.length,
-    onInvalidatorAvailable: (InvalidatorCallback callback) { invalidator = callback; }
+  return new LazyBlock(
+    delegate: new LazyBlockBuilder(builder: buildCard)
   );
 }
 
 void main() {
-  test('MixedViewport is a build function (smoketest)', () {
+  test('LazyBlock is a build function (smoketest)', () {
     testWidgets((WidgetTester tester) {
       tester.pumpWidget(buildFrame());
       expect(tester.findText('0'), isNotNull);

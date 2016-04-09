@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
 import 'dart:io';
 
 import 'package:path/path.dart' as path;
@@ -109,6 +108,7 @@ class ApplicationPackageStore {
   ApplicationPackage getPackageForPlatform(TargetPlatform platform) {
     switch (platform) {
       case TargetPlatform.android_arm:
+      case TargetPlatform.android_x64:
         return android;
       case TargetPlatform.ios:
         return iOS;
@@ -118,13 +118,14 @@ class ApplicationPackageStore {
     }
   }
 
-  static Future<ApplicationPackageStore> forConfigs(List<BuildConfiguration> configs) async {
+  static ApplicationPackageStore forConfigs(List<BuildConfiguration> configs) {
     AndroidApk android;
     IOSApp iOS;
 
     for (BuildConfiguration config in configs) {
       switch (config.targetPlatform) {
         case TargetPlatform.android_arm:
+        case TargetPlatform.android_x64:
           android ??= new AndroidApk.fromBuildConfiguration(config);
           break;
 

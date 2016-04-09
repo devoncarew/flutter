@@ -17,8 +17,15 @@ const String _text2 =
 const String _text3 =
   "By default snackbars automatically disappear after a few seconds ";
 
-class SnackBarDemo extends StatelessWidget {
+class SnackBarDemo extends StatefulWidget {
   SnackBarDemo({ Key key }) : super(key: key);
+
+  @override
+  _SnackBarDemoState createState() => new _SnackBarDemoState();
+}
+
+class _SnackBarDemoState extends State<SnackBarDemo> {
+  int _snackBarIndex = 1;
 
   Widget buildBody(BuildContext context) {
     return new Padding(
@@ -27,21 +34,24 @@ class SnackBarDemo extends StatelessWidget {
         children: <Widget>[
           new Text(_text1),
           new Text(_text2),
-          new RaisedButton(
-            child: new Text('Show a SnackBar'),
-            onPressed: () {
-              Scaffold.of(context).showSnackBar(new SnackBar(
-                content: new Text('This is a SnackBar'),
-                action: new SnackBarAction(
-                  label: 'ACTION',
-                  onPressed: () {
-                    Scaffold.of(context).showSnackBar(new SnackBar(
-                      content: new Text("You pressed the SnackBar's Action")
-                    ));
-                  }
-                )
-              ));
-            }
+          new Center(
+            child: new RaisedButton(
+              child: new Text('SHOW A SNACKBAR'),
+              onPressed: () {
+                final int thisSnackBarIndex = _snackBarIndex++;
+                Scaffold.of(context).showSnackBar(new SnackBar(
+                  content: new Text('This is snackbar #$thisSnackBarIndex.'),
+                  action: new SnackBarAction(
+                    label: 'ACTION',
+                    onPressed: () {
+                      Scaffold.of(context).showSnackBar(new SnackBar(
+                        content: new Text('You pressed snackbar $thisSnackBarIndex\'s action.')
+                      ));
+                    }
+                  )
+                ));
+              }
+            )
           ),
           new Text(_text3),
         ]
@@ -60,7 +70,7 @@ class SnackBarDemo extends StatelessWidget {
   Widget build(BuildContext context) {
     return new Scaffold(
       appBar: new AppBar(
-        title: new Text('SnackBar')
+        title: new Text('Snackbar')
       ),
       body: new Builder(
         // Create an inner BuildContext so that the snackBar onPressed methods

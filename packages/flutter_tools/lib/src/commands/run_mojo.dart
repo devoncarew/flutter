@@ -105,9 +105,8 @@ class RunMojoCommand extends FlutterCommand {
       flutterPath = _makePathAbsolute(localPath);
     }
 
-    if (argResults['android']) {
+    if (argResults['android'])
       args.add('--android');
-    }
 
     final Uri appUri = Uri.parse(targetApp);
     if (appUri.scheme.isEmpty || appUri.scheme == 'file') {
@@ -141,9 +140,8 @@ class RunMojoCommand extends FlutterCommand {
         args.add('--verbose');
     }
 
-    if (argResults['checked']) {
+    if (argResults['checked'])
       args.add('--args-for=mojo:flutter --enable-checked-mode');
-    }
 
     args.addAll(argResults.rest);
     printStatus('$args');
@@ -161,8 +159,6 @@ class RunMojoCommand extends FlutterCommand {
       printError('Cannot specify both --mojo-debug and --mojo-release');
       return 1;
     }
-
-    await downloadToolchain();
 
     String targetApp = argResults['app'];
     if (targetApp == null) {

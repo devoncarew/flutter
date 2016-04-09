@@ -7,8 +7,22 @@ import 'dart:io';
 
 import 'package:path/path.dart' as path;
 
+import '../base/logger.dart';
 import '../base/process.dart';
+import '../cache.dart';
 import '../globals.dart';
+
+bool _shouldRunPubGet({ File pubSpecYaml, File dotPackages }) {
+  if (!dotPackages.existsSync())
+    return true;
+  DateTime dotPackagesLastModified = dotPackages.lastModifiedSync();
+  if (pubSpecYaml.lastModifiedSync().isAfter(dotPackagesLastModified))
+    return true;
+  File flutterToolsStamp = Cache.instance.getStampFileFor('flutter_tools');
+  if (flutterToolsStamp.lastModifiedSync().isAfter(dotPackagesLastModified))
+    return true;
+  return false;
+}
 
 Future<int> pubGet({
   String directory,
@@ -29,13 +43,14 @@ Future<int> pubGet({
     return 1;
   }
 
-  if (!checkLastModified || !dotPackages.existsSync() || pubSpecYaml.lastModifiedSync().isAfter(dotPackages.lastModifiedSync())) {
+  if (!checkLastModified || _shouldRunPubGet(pubSpecYaml: pubSpecYaml, dotPackages: dotPackages)) {
     String command = upgrade ? 'upgrade' : 'get';
-    printStatus("Running 'pub $command' in $directory${Platform.pathSeparator}...");
+    Status status = logger.startProgress("Running 'pub $command' in ${path.basename(directory)}...");
     int code = await runCommandAndStreamOutput(
-      <String>[sdkBinaryName('pub'), '--verbosity=warning', command, '--no-package-symlinks'],
+      <String>[sdkBinaryName('pub'), '--verbosity=warning', command, '--no-package-symlinks', '--no-precompile'],
       workingDirectory: directory
     );
+    status.stop(showElapsedTime: true);
     if (code != 0)
       return code;
   }

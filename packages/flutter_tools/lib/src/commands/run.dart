@@ -10,7 +10,6 @@ import 'package:path/path.dart' as path;
 import '../application_package.dart';
 import '../base/common.dart';
 import '../build_configuration.dart';
-import '../dart/pub.dart';
 import '../device.dart';
 import '../globals.dart';
 import '../runner/flutter_command.dart';
@@ -83,24 +82,7 @@ class RunCommand extends RunCommandBase {
   bool get requiresDevice => true;
 
   @override
-  Future<int> run() async {
-    if (argResults['pub']) {
-      int exitCode = await pubGet();
-      if (exitCode != 0)
-        return exitCode;
-    }
-    return await super.run();
-  }
-
-  @override
   Future<int> runInProject() async {
-    printTrace('Downloading toolchain.');
-
-    await Future.wait([
-      downloadToolchain(),
-      downloadApplicationPackages(),
-    ], eagerError: true);
-
     bool clearLogs = argResults['clear-logs'];
 
     int debugPort;
@@ -228,7 +210,7 @@ Future<int> startApp(
     checked: checked,
     clearLogs: clearLogs,
     startPaused: startPaused,
-    debugPort: debugPort,
+    observatoryPort: debugPort,
     platformArgs: platformArgs
   );
 

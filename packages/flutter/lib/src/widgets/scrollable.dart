@@ -8,20 +8,19 @@ import 'dart:ui' as ui show window;
 
 import 'package:newton/newton.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/rendering.dart' show HasMainAxis;
 
 import 'basic.dart';
 import 'framework.dart';
 import 'gesture_detector.dart';
-import 'mixed_viewport.dart';
 import 'notification_listener.dart';
 import 'page_storage.dart';
 import 'scroll_behavior.dart';
 
 /// The accuracy to which scrolling is computed.
 final Tolerance kPixelScrollTolerance = new Tolerance(
-  velocity: 1.0 / (0.050 * ui.window.devicePixelRatio),  // logical pixels per second
-  distance: 1.0 / ui.window.devicePixelRatio  // logical pixels
+  // TODO(ianh): Handle the case of the device pixel ratio changing.
+  velocity: 1.0 / (0.050 * ui.window.devicePixelRatio), // logical pixels per second
+  distance: 1.0 / ui.window.devicePixelRatio // logical pixels
 );
 
 typedef void ScrollListener(double scrollOffset);
@@ -332,7 +331,6 @@ abstract class ScrollableState<T extends Scrollable> extends State<T> {
       _scrollOffset = newScrollOffset;
     });
     PageStorage.of(context)?.writeState(context, _scrollOffset);
-    new ScrollNotification(this, _scrollOffset).dispatch(context);
     _startScroll();
     dispatchOnScroll();
     _endScroll();
@@ -378,9 +376,16 @@ abstract class ScrollableState<T extends Scrollable> extends State<T> {
     return _controller.animateTo(newScrollOffset, duration: duration, curve: curve).then(_endScroll);
   }
 
+  /// Update any in-progress scrolling physics to account for new scroll behavior.
+  ///
+  /// The scrolling physics depends on the scroll behavior. When changing the
+  /// scrolling behavior, call this function to update any in-progress scrolling
+  /// physics to account for the new scroll behavior. This function preserves
+  /// the current velocity when updating the physics.
+  ///
+  /// If there are no in-progress scrolling physics, this function scrolls to
+  /// the given offset instead.
   void didUpdateScrollBehavior(double newScrollOffset) {
-    if (newScrollOffset == _scrollOffset)
-      return;
     if (_numberOfInProgressScrolls > 0) {
       if (_simulation != null) {
         double dx = _simulation.dx(_controller.lastElapsedDuration.inMicroseconds / Duration.MICROSECONDS_PER_SECOND);
@@ -487,6 +492,7 @@ abstract class ScrollableState<T extends Scrollable> extends State<T> {
     assert(_numberOfInProgressScrolls > 0);
     if (config.onScroll != null)
       config.onScroll(_scrollOffset);
+    new ScrollNotification(this, ScrollNotificationKind.updated).dispatch(context);
   }
 
   void _handleDragDown(_) {
@@ -511,6 +517,7 @@ abstract class ScrollableState<T extends Scrollable> extends State<T> {
     assert(_numberOfInProgressScrolls == 1);
     if (config.onScrollStart != null)
       config.onScrollStart(_scrollOffset);
+    new ScrollNotification(this, ScrollNotificationKind.started).dispatch(context);
   }
 
   void _handleDragUpdate(double delta) {
@@ -536,9 +543,11 @@ abstract class ScrollableState<T extends Scrollable> extends State<T> {
     assert(_numberOfInProgressScrolls == 0);
     if (config.onScrollEnd != null)
       config.onScrollEnd(_scrollOffset);
+    if (mounted)
+      new ScrollNotification(this, ScrollNotificationKind.ended).dispatch(context);
   }
 
-  final GlobalKey _gestureDetectorKey = new GlobalKey();
+  final GlobalKey<RawGestureDetectorState> _gestureDetectorKey = new GlobalKey<RawGestureDetectorState>();
 
   @override
   Widget build(BuildContext context) {
@@ -604,11 +613,10 @@ abstract class ScrollableState<T extends Scrollable> extends State<T> {
   /// The widgets used by this method should be widgets that provide a
   /// layout-time callback that reports the sizes that are relevant to
   /// the scroll offset (typically the size of the scrollable
-  /// container and the scrolled contents). [Viewport] and
-  /// [MixedViewport] provide an [onPaintOffsetUpdateNeeded] callback
-  /// for this purpose; [GridViewport], [ListViewport], and
-  /// [LazyListViewport] provide an [onExtentsChanged] callback for
-  /// this purpose.
+  /// container and the scrolled contents). [Viewport] provides an
+  /// [onPaintOffsetUpdateNeeded] callback for this purpose; [GridViewport],
+  /// [ListViewport], [LazyListViewport], and [LazyBlockViewport] provide an
+  /// [onExtentsChanged] callback for this purpose.
   ///
   /// This callback should be used to update the scroll behavior, if
   /// necessary, and then to call [updateGestureDetector] to update
@@ -616,15 +624,31 @@ abstract class ScrollableState<T extends Scrollable> extends State<T> {
   Widget buildContent(BuildContext context);
 }
 
+/// Indicates if a [ScrollNotification] indicates the start, end or the
+/// middle of a scroll.
+enum ScrollNotificationKind {
+  /// The [ScrollNotification] indicates that the scrollOffset has been changed
+  /// and no existing scroll is underway.
+  started,
+
+  /// The [ScrollNotification] indicates that the scrollOffset has been changed.
+  updated,
+
+  /// The [ScrollNotification] indicates that the scrollOffset has stopped changing.
+  /// This may be because the fling animation that follows a drag gesture has
+  /// completed or simply because the scrollOffset was reset.
+  ended
+}
+
 /// Indicates that a descendant scrollable has scrolled.
 class ScrollNotification extends Notification {
-  ScrollNotification(this.scrollable, this.scrollOffset);
+  ScrollNotification(this.scrollable, this.kind);
+
+  // Indicates if we're at the start, end or the middle of a scroll.
+  final ScrollNotificationKind kind;
 
   /// The scrollable that scrolled.
   final ScrollableState scrollable;
-
-  /// The new scroll offset that the scrollable obtained.
-  final double scrollOffset;
 }
 
 /// A simple scrollable widget that has a single child. Use this widget if
@@ -658,7 +682,7 @@ class ScrollableViewport extends Scrollable {
 
 class _ScrollableViewportState extends ScrollableState<ScrollableViewport> {
   @override
-  ScrollBehavior<double, double> createScrollBehavior() => new OverscrollWhenScrollableBehavior();
+  OverscrollWhenScrollableBehavior createScrollBehavior() => new OverscrollWhenScrollableBehavior();
 
   @override
   OverscrollWhenScrollableBehavior get scrollBehavior => super.scrollBehavior;
@@ -697,6 +721,10 @@ class _ScrollableViewportState extends ScrollableState<ScrollableViewport> {
 /// A mashup of [ScrollableViewport] and [BlockBody]. Useful when you have a small,
 /// fixed number of children that you wish to arrange in a block layout and that
 /// might exceed the height of its container (and therefore need to scroll).
+///
+/// If you have a large number of children, consider using [LazyBlock] (if the
+/// children have variable height) or [ScrollableList] (if the children all have
+/// the same fixed height).
 class Block extends StatelessWidget {
   Block({
     Key key,
@@ -732,130 +760,6 @@ class Block extends StatelessWidget {
       scrollAnchor: scrollAnchor,
       onScroll: onScroll,
       child: contents
-    );
-  }
-}
-
-abstract class ScrollableListPainter extends RenderObjectPainter {
-  @override
-  void attach(RenderObject renderObject) {
-    assert(renderObject is RenderBox);
-    assert(renderObject is HasMainAxis);
-    super.attach(renderObject);
-  }
-
-  @override
-  RenderBox get renderObject => super.renderObject;
-
-  Axis get scrollDirection {
-    HasMainAxis scrollable = renderObject as dynamic;
-    return scrollable?.mainAxis;
-  }
-
-  Size get viewportSize => renderObject.size;
-
-  double get contentExtent => _contentExtent;
-  double _contentExtent = 0.0;
-  void set contentExtent (double value) {
-    assert(value != null);
-    assert(value >= 0.0);
-    if (_contentExtent == value)
-      return;
-    _contentExtent = value;
-    renderObject?.markNeedsPaint();
-  }
-
-  double get scrollOffset => _scrollOffset;
-  double _scrollOffset = 0.0;
-  void set scrollOffset (double value) {
-    assert(value != null);
-    if (_scrollOffset == value)
-      return;
-    _scrollOffset = value;
-    renderObject?.markNeedsPaint();
-  }
-
-  /// Called when a scroll starts. Subclasses may override this method to
-  /// initialize some state or to play an animation. The returned Future should
-  /// complete when the computation triggered by this method has finished.
-  Future<Null> scrollStarted() => new Future<Null>.value();
-
-
-  /// Similar to scrollStarted(). Called when a scroll ends. For fling scrolls
-  /// "ended" means that the scroll animation either stopped of its own accord
-  /// or was canceled  by the user.
-  Future<Null> scrollEnded() => new Future<Null>.value();
-}
-
-/// A general scrollable list for a large number of children that might not all
-/// have the same height. Prefer [ScrollableList] when all the children
-/// have the same height because it can use that property to be more efficient.
-/// Prefer [ScrollableViewport] with a single child.
-///
-/// ScrollableMixedWidgetList only supports vertical scrolling.
-class ScrollableMixedWidgetList extends Scrollable {
-  ScrollableMixedWidgetList({
-    Key key,
-    double initialScrollOffset,
-    ScrollListener onScroll,
-    SnapOffsetCallback snapOffsetCallback,
-    this.builder,
-    this.token,
-    this.onInvalidatorAvailable
-  }) : super(
-    key: key,
-    initialScrollOffset: initialScrollOffset,
-    onScroll: onScroll,
-    snapOffsetCallback: snapOffsetCallback
-  );
-
-  // TODO(ianh): Support horizontal scrolling.
-
-  final IndexedBuilder builder;
-  final Object token;
-  final InvalidatorAvailableCallback onInvalidatorAvailable;
-
-  @override
-  ScrollableMixedWidgetListState createState() => new ScrollableMixedWidgetListState();
-}
-
-class ScrollableMixedWidgetListState extends ScrollableState<ScrollableMixedWidgetList> {
-  @override
-  void initState() {
-    super.initState();
-    scrollBehavior.updateExtents(
-      contentExtent: double.INFINITY
-    );
-  }
-
-  @override
-  ScrollBehavior<double, double> createScrollBehavior() => new OverscrollBehavior();
-
-  @override
-  OverscrollBehavior get scrollBehavior => super.scrollBehavior;
-
-  Offset _handlePaintOffsetUpdateNeeded(ViewportDimensions dimensions) {
-    // We make various state changes here but don't have to do so in a
-    // setState() callback because we are called during layout and all
-    // we're updating is the new offset, which we are providing to the
-    // render object via our return value.
-    didUpdateScrollBehavior(scrollBehavior.updateExtents(
-      contentExtent: dimensions.contentSize.height,
-      containerExtent: dimensions.containerSize.height,
-      scrollOffset: scrollOffset
-    ));
-    updateGestureDetector();
-    return scrollOffsetToPixelDelta(scrollOffset);
-  }
-
-  @override
-  Widget buildContent(BuildContext context) {
-    return new MixedViewport(
-      startOffset: scrollOffset,
-      builder: config.builder,
-      token: config.token,
-      onInvalidatorAvailable: config.onInvalidatorAvailable,
-      onPaintOffsetUpdateNeeded: _handlePaintOffsetUpdateNeeded
     );
   }
 }

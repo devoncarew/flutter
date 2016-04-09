@@ -4,10 +4,6 @@
 
 import 'package:flutter/widgets.dart';
 
-import 'constants.dart';
-import 'scrollbar_painter.dart';
-import 'theme.dart';
-
 enum MaterialListType {
   oneLine,
   oneLineWithAvatar,
@@ -16,10 +12,10 @@ enum MaterialListType {
 }
 
 Map<MaterialListType, double> kListItemExtent = const <MaterialListType, double>{
-  MaterialListType.oneLine: kOneLineListItemHeight,
-  MaterialListType.oneLineWithAvatar: kOneLineListItemWithAvatarHeight,
-  MaterialListType.twoLine: kTwoLineListItemHeight,
-  MaterialListType.threeLine: kThreeLineListItemHeight,
+  MaterialListType.oneLine: 48.0,
+  MaterialListType.oneLineWithAvatar: 56.0,
+  MaterialListType.twoLine: 72.0,
+  MaterialListType.threeLine: 88.0,
 };
 
 class MaterialList extends StatefulWidget {
@@ -28,6 +24,7 @@ class MaterialList extends StatefulWidget {
     this.initialScrollOffset,
     this.onScroll,
     this.type: MaterialListType.twoLine,
+    this.clampOverscrolls: false,
     this.children,
     this.scrollablePadding: EdgeInsets.zero,
     this.scrollableKey
@@ -36,6 +33,7 @@ class MaterialList extends StatefulWidget {
   final double initialScrollOffset;
   final ScrollListener onScroll;
   final MaterialListType type;
+  final bool clampOverscrolls;
   final Iterable<Widget> children;
   final EdgeInsets scrollablePadding;
   final Key scrollableKey;
@@ -45,26 +43,16 @@ class MaterialList extends StatefulWidget {
 }
 
 class _MaterialListState extends State<MaterialList> {
-  ScrollbarPainter _scrollbarPainter;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollbarPainter = new ScrollbarPainter(
-      getThumbColor: () => Theme.of(context).highlightColor
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return new ScrollableList(
       key: config.scrollableKey,
       initialScrollOffset: config.initialScrollOffset,
       scrollDirection: Axis.vertical,
+      clampOverscrolls: config.clampOverscrolls,
       onScroll: config.onScroll,
       itemExtent: kListItemExtent[config.type],
       padding: const EdgeInsets.symmetric(vertical: 8.0) + config.scrollablePadding,
-      scrollableListPainter: _scrollbarPainter,
       children: config.children
     );
   }

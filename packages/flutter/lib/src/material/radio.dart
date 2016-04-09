@@ -35,6 +35,16 @@ const double _kInnerRadius = 5.0;
 ///  * [Switch]
 ///  * <https://www.google.com/design/spec/components/selection-controls.html#selection-controls-radio-button>
 class Radio<T> extends StatelessWidget {
+  /// Creates a material design radio button.
+  ///
+  /// The radio button itself does not maintain any state. Instead, when the state
+  /// of the radio button changes, the widget calls the [onChanged] callback.
+  /// Most widget that use a radio button will listen for the [onChanged]
+  /// callback and rebuild the radio button with a new [groupValue] to update the
+  /// visual appearance of the radio button.
+  ///
+  /// * [value] and [groupValue] together determines whether the radio button is selected.
+  /// * [onChanged] is when the user selects this radio button.
   Radio({
     Key key,
     this.value,
@@ -69,7 +79,7 @@ class Radio<T> extends StatelessWidget {
   bool get _enabled => onChanged != null;
 
   Color _getInactiveColor(ThemeData themeData) {
-    return _enabled ? themeData.unselectedColor : themeData.disabledColor;
+    return _enabled ? themeData.unselectedWidgetColor : themeData.disabledColor;
   }
 
   void _handleChanged(bool selected) {

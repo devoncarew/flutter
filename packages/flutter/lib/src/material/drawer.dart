@@ -42,13 +42,16 @@ const Duration _kBaseSettleDuration = const Duration(milliseconds: 246);
 ///  * [DrawerHeader]
 ///  * <https://www.google.com/design/spec/patterns/navigation-drawer.html>
 class Drawer extends StatelessWidget {
+  /// Creates a material design drawer.
+  ///
+  /// Typically used in the [Scaffold.drawer] property.
   Drawer({
     Key key,
     this.elevation: 16,
     this.child
   }) : super(key: key);
 
-  /// The height at which to place this drawer.
+  /// The z-coordinate at which to place this drawer.
   final int elevation;
 
   /// The widget below this widget in the tree.
@@ -83,6 +86,7 @@ class DrawerController extends StatefulWidget {
     this.child
   }) : super(key: key);
 
+  /// The widget below this widget in the tree.
   final Widget child;
 
   @override

@@ -21,8 +21,8 @@ class ScrollableList extends Scrollable {
     SnapOffsetCallback snapOffsetCallback,
     this.itemExtent,
     this.itemsWrap: false,
+    this.clampOverscrolls: false,
     this.padding,
-    this.scrollableListPainter,
     this.children
   }) : super(
     key: key,
@@ -37,8 +37,8 @@ class ScrollableList extends Scrollable {
 
   final double itemExtent;
   final bool itemsWrap;
+  final bool clampOverscrolls;
   final EdgeInsets padding;
-  final ScrollableListPainter scrollableListPainter;
   final Iterable<Widget> children;
 
   @override
@@ -47,13 +47,12 @@ class ScrollableList extends Scrollable {
 
 class _ScrollableListState extends ScrollableState<ScrollableList> {
   @override
-  ScrollBehavior<double, double> createScrollBehavior() => new OverscrollWhenScrollableBehavior();
+  ExtentScrollBehavior createScrollBehavior() => new OverscrollWhenScrollableBehavior();
 
   @override
   ExtentScrollBehavior get scrollBehavior => super.scrollBehavior;
 
   void _handleExtentsChanged(double contentExtent, double containerExtent) {
-    config.scrollableListPainter?.contentExtent = contentExtent;
     setState(() {
       didUpdateScrollBehavior(scrollBehavior.updateExtents(
         contentExtent: config.itemsWrap ? double.INFINITY : contentExtent,
@@ -64,34 +63,18 @@ class _ScrollableListState extends ScrollableState<ScrollableList> {
   }
 
   @override
-  void dispatchOnScrollStart() {
-    super.dispatchOnScrollStart();
-    config.scrollableListPainter?.scrollStarted();
-  }
-
-  @override
-  void dispatchOnScroll() {
-    super.dispatchOnScroll();
-    config.scrollableListPainter?.scrollOffset = scrollOffset;
-  }
-
-  @override
-  void dispatchOnScrollEnd() {
-    super.dispatchOnScrollEnd();
-    config.scrollableListPainter?.scrollEnded();
-  }
-
-  @override
   Widget buildContent(BuildContext context) {
+    final double listScrollOffset = config.clampOverscrolls
+      ? scrollOffset.clamp(scrollBehavior.minScrollOffset, scrollBehavior.maxScrollOffset)
+      : scrollOffset;
     return new ListViewport(
       onExtentsChanged: _handleExtentsChanged,
-      scrollOffset: scrollOffset,
+      scrollOffset: listScrollOffset,
       mainAxis: config.scrollDirection,
       anchor: config.scrollAnchor,
       itemExtent: config.itemExtent,
       itemsWrap: config.itemsWrap,
       padding: config.padding,
-      overlayPainter: config.scrollableListPainter,
       children: config.children
     );
   }
@@ -192,8 +175,8 @@ class _VirtualListViewportElement extends VirtualViewportElement {
     super.updateRenderObject(oldWidget);
   }
 
-  double _contentExtent;
-  double _containerExtent;
+  double _lastReportedContentExtent;
+  double _lastReportedContainerExtent;
 
   @override
   void layout(BoxConstraints constraints) {
@@ -253,10 +236,10 @@ class _VirtualListViewportElement extends VirtualViewportElement {
 
     super.layout(constraints);
 
-    if (contentExtent != _contentExtent || containerExtent != _containerExtent) {
-      _contentExtent = contentExtent;
-      _containerExtent = containerExtent;
-      widget.onExtentsChanged(_contentExtent, _containerExtent);
+    if (contentExtent != _lastReportedContentExtent || containerExtent != _lastReportedContainerExtent) {
+      _lastReportedContentExtent = contentExtent;
+      _lastReportedContainerExtent = containerExtent;
+      widget.onExtentsChanged(_lastReportedContentExtent, _lastReportedContainerExtent);
     }
   }
 }
@@ -303,8 +286,7 @@ class ScrollableLazyList extends Scrollable {
     this.itemExtent,
     this.itemCount,
     this.itemBuilder,
-    this.padding,
-    this.scrollableListPainter
+    this.padding
   }) : super(
     key: key,
     initialScrollOffset: initialScrollOffset,
@@ -322,7 +304,6 @@ class ScrollableLazyList extends Scrollable {
   final int itemCount;
   final ItemListBuilder itemBuilder;
   final EdgeInsets padding;
-  final ScrollableListPainter scrollableListPainter;
 
   @override
   ScrollableState createState() => new _ScrollableLazyListState();
@@ -330,13 +311,12 @@ class ScrollableLazyList extends Scrollable {
 
 class _ScrollableLazyListState extends ScrollableState<ScrollableLazyList> {
   @override
-  ScrollBehavior<double, double> createScrollBehavior() => new OverscrollBehavior();
+  ExtentScrollBehavior createScrollBehavior() => new OverscrollBehavior();
 
   @override
   ExtentScrollBehavior get scrollBehavior => super.scrollBehavior;
 
   void _handleExtentsChanged(double contentExtent, double containerExtent) {
-    config.scrollableListPainter?.contentExtent = contentExtent;
     setState(() {
       didUpdateScrollBehavior(scrollBehavior.updateExtents(
         contentExtent: contentExtent,
@@ -344,24 +324,6 @@ class _ScrollableLazyListState extends ScrollableState<ScrollableLazyList> {
         scrollOffset: scrollOffset
       ));
     });
-  }
-
-  @override
-  void dispatchOnScrollStart() {
-    super.dispatchOnScrollStart();
-    config.scrollableListPainter?.scrollStarted();
-  }
-
-  @override
-  void dispatchOnScroll() {
-    super.dispatchOnScroll();
-    config.scrollableListPainter?.scrollOffset = scrollOffset;
-  }
-
-  @override
-  void dispatchOnScrollEnd() {
-    super.dispatchOnScrollEnd();
-    config.scrollableListPainter?.scrollEnded();
   }
 
   @override
@@ -374,8 +336,7 @@ class _ScrollableLazyListState extends ScrollableState<ScrollableLazyList> {
       itemExtent: config.itemExtent,
       itemCount: config.itemCount,
       itemBuilder: config.itemBuilder,
-      padding: config.padding,
-      overlayPainter: config.scrollableListPainter
+      padding: config.padding
     );
   }
 }
