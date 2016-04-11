@@ -178,8 +178,8 @@ class BuildApkCommand extends FlutterCommand {
   @override
   final String description = 'Build an Android APK file from your app.\n\n'
     'This command can build develop and deploy versions of your application. \'develop\' builds support\n'
-    'debugging and a quick development cycle. \'deploy\' builds don\'t support debugging, are AOT compiled,\n'
-    'and are suitable for deploying to app stores.';
+    'debugging and a quick development cycle. \'deploy\' builds don\'t support debugging and are suitable\n'
+    'for deploying to app stores.';
 
   @override
   Future<int> runInProject() async {
@@ -223,17 +223,22 @@ class BuildApkCommand extends FlutterCommand {
 }
 
 Future<_ApkComponents> _findApkComponents(
-  BuildConfiguration config, String enginePath, String manifest, String resources, bool buildForDeploy
+  TargetPlatform platform,
+  BuildConfiguration config,
+  String enginePath,
+  String manifest,
+  String resources,
+  bool buildForDeploy
 ) async {
   // TODO(devoncarew): Get the right artifacts for [buildForDeploy].
 
   List<String> artifactPaths;
   if (enginePath != null) {
-    // TODO(devoncarew): Support x64.
+    String abiDir = platform == TargetPlatform.android_arm ? 'armeabi-v7a' : 'x86_64';
     artifactPaths = [
       '$enginePath/third_party/icu/android/icudtl.dat',
       '${config.buildDir}/gen/sky/shell/shell/classes.dex.jar',
-      '${config.buildDir}/gen/sky/shell/shell/shell/libs/armeabi-v7a/libsky_shell.so',
+      '${config.buildDir}/gen/sky/shell/shell/shell/libs/$abiDir/libsky_shell.so',
       '$enginePath/build/android/ant/chromium-debug.keystore',
     ];
   } else {
@@ -302,8 +307,7 @@ int _buildApk(
 
     _AssetBuilder artifactBuilder = new _AssetBuilder(tempDir, 'artifacts');
     artifactBuilder.add(classesDex, 'classes.dex');
-    // x86? x86_64?
-    String abiDir = platform == TargetPlatform.android_arm ? 'armeabi-v7a' : 'x86';
+    String abiDir = platform == TargetPlatform.android_arm ? 'armeabi-v7a' : 'x86_64';
     artifactBuilder.add(components.libSkyShell, 'lib/$abiDir/libsky_shell.so');
 
     File unalignedApk = new File('${tempDir.path}/app.apk.unaligned');
@@ -433,14 +437,16 @@ Future<int> buildAndroid(
   }
 
   BuildConfiguration config = configs.firstWhere((BuildConfiguration bc) => bc.targetPlatform == platform);
-  _ApkComponents components = await _findApkComponents(config, enginePath, manifest, resources, buildForDeploy);
+  _ApkComponents components = await _findApkComponents(
+    platform, config, enginePath, manifest, resources, buildForDeploy
+  );
 
   if (components == null) {
     printError('Failure building APK. Unable to find components.');
     return 1;
   }
 
-  printStatus('Building APK...');
+  printStatus('Building APK in ${buildForDeploy ? 'deploy' : 'develop'} mode...');
 
   if (flxPath != null && flxPath.isNotEmpty) {
     if (!FileSystemEntity.isFileSync(flxPath)) {

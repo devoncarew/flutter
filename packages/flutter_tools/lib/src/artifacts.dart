@@ -6,7 +6,6 @@ import 'dart:io';
 
 import 'package:path/path.dart' as path;
 
-import 'base/process.dart';
 import 'build_configuration.dart';
 import 'globals.dart';
 
@@ -23,6 +22,8 @@ String getNameForTargetPlatform(TargetPlatform platform) {
   switch (platform) {
     case TargetPlatform.android_arm:
       return 'android-arm';
+    case TargetPlatform.android_x64:
+      return 'android-x64';
     case TargetPlatform.ios:
       return 'ios';
     case TargetPlatform.darwin_x64:
@@ -132,6 +133,32 @@ class ArtifactStore {
       targetPlatform: TargetPlatform.android_arm
     ),
 
+    // android-x86
+    const Artifact._(
+      name: 'Compiled Java code',
+      fileName: 'classes.dex.jar',
+      type: ArtifactType.androidClassesJar,
+      targetPlatform: TargetPlatform.android_x64
+    ),
+    const Artifact._(
+      name: 'ICU data table',
+      fileName: 'icudtl.dat',
+      type: ArtifactType.androidIcuData,
+      targetPlatform: TargetPlatform.android_x64
+    ),
+    const Artifact._(
+      name: 'Key Store',
+      fileName: 'chromium-debug.keystore',
+      type: ArtifactType.androidKeystore,
+      targetPlatform: TargetPlatform.android_x64
+    ),
+    const Artifact._(
+      name: 'Compiled C++ code',
+      fileName: 'libsky_shell.so',
+      type: ArtifactType.androidLibSkyShell,
+      targetPlatform: TargetPlatform.android_x64
+    ),
+
     // iOS
     const Artifact._(
       name: 'iOS Runner (Xcode Project)',
@@ -188,10 +215,12 @@ class ArtifactStore {
     File cachedFile = new File(
       path.join(_getBaseCacheDir().path, 'engine', artifact.platform, artifact.fileName)
     );
+
     if (!cachedFile.existsSync()) {
       printError('File not found in the platform artifacts: ${cachedFile.path}');
-      throw new ProcessExit(2);
+      return null;
+    } else {
+      return cachedFile.path;
     }
-    return cachedFile.path;
   }
 }
