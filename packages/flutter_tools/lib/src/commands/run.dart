@@ -53,6 +53,13 @@ class RunCommand extends RunCommandBase {
         help: 'Start in a paused mode and wait for a debugger to connect.');
     argParser.addOption('debug-port',
         help: 'Listen to the given port for a debug connection (defaults to $kDefaultObservatoryPort).');
+    argParser.addFlag('build',
+        defaultsTo: true,
+        help: 'If necessary, build the app before running.');
+    argParser.addOption('use-application-binary',
+        hide: true,
+        help: 'Specify a pre-built application binary to use when running.');
+
     usesPubOption();
 
     argParser.addFlag('resident',
@@ -142,7 +149,8 @@ class RunCommand extends RunCommandBase {
       return runner.run(
         traceStartup: traceStartup,
         benchmark: argResults['benchmark'],
-        route: route
+        route: route,
+        shouldBuild: argResults['build']
       );
     } else {
       // TODO(devoncarew): Remove this path and support the `--no-resident` option
@@ -156,7 +164,8 @@ class RunCommand extends RunCommandBase {
         traceStartup: traceStartup,
         benchmark: argResults['benchmark'],
         route: route,
-        buildMode: getBuildMode()
+        buildMode: getBuildMode(),
+        shouldBuild: argResults['build']
       );
     }
   }
@@ -171,7 +180,8 @@ Future<int> startApp(
   bool traceStartup: false,
   bool benchmark: false,
   String route,
-  BuildMode buildMode: BuildMode.debug
+  BuildMode buildMode: BuildMode.debug,
+  bool shouldBuild: true
 }) async {
   String mainPath = findMainDartFile(target);
   if (!FileSystemEntity.isFileSync(mainPath)) {
@@ -196,7 +206,7 @@ Future<int> startApp(
   Stopwatch stopwatch = new Stopwatch()..start();
 
   // TODO(devoncarew): We shouldn't have to do type checks here.
-  if (install && device is AndroidDevice) {
+  if (shouldBuild && install && device is AndroidDevice) {
     printTrace('Running build command.');
 
     int result = await buildApk(

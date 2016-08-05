@@ -134,12 +134,18 @@ class IOSApp extends ApplicationPackage {
   }
 }
 
-ApplicationPackage getApplicationPackageForPlatform(TargetPlatform platform) {
+ApplicationPackage getApplicationPackageForPlatform(
+  TargetPlatform platform, {
+  String preBuiltApplicationBinary
+}) {
   switch (platform) {
     case TargetPlatform.android_arm:
     case TargetPlatform.android_x64:
     case TargetPlatform.android_x86:
-      return new AndroidApk.fromCurrentDirectory();
+      if (preBuiltApplicationBinary != null)
+        return new AndroidApk.fromApk(preBuiltApplicationBinary);
+      else
+        return new AndroidApk.fromCurrentDirectory();
     case TargetPlatform.ios:
       return new IOSApp.fromCurrentDirectory();
     case TargetPlatform.darwin_x64:

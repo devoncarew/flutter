@@ -70,7 +70,8 @@ class RunAndStayResident {
     bool traceStartup: false,
     bool benchmark: false,
     Completer<int> observatoryPortCompleter,
-    String route
+    String route,
+    bool shouldBuild: true
   }) {
     // Don't let uncaught errors kill the process.
     return runZoned(() {
@@ -78,7 +79,8 @@ class RunAndStayResident {
         traceStartup: traceStartup,
         benchmark: benchmark,
         observatoryPortCompleter: observatoryPortCompleter,
-        route: route
+        route: route,
+        shouldBuild: shouldBuild
       );
     }, onError: (dynamic error, StackTrace stackTrace) {
       printError('Exception from flutter run: $error', stackTrace);
@@ -127,7 +129,8 @@ class RunAndStayResident {
     bool traceStartup: false,
     bool benchmark: false,
     Completer<int> observatoryPortCompleter,
-    String route
+    String route,
+    bool shouldBuild: true
   }) async {
     _mainPath = findMainDartFile(target);
     if (!FileSystemEntity.isFileSync(_mainPath)) {
@@ -138,7 +141,9 @@ class RunAndStayResident {
       return 1;
     }
 
-    _package = getApplicationPackageForPlatform(device.platform);
+    // TODO: aapt dump badging build/app_prebuilt.apk
+    // launchable-activity: name='org.domokit.sky.shell.SkyActivity'  label='' icon=''
+    _package = getApplicationPackageForPlatform(device.platform, preBuiltApplicationBinary);
 
     if (_package == null) {
       String message = 'No application found for ${device.platform}.';
@@ -152,7 +157,7 @@ class RunAndStayResident {
     Stopwatch startTime = new Stopwatch()..start();
 
     // TODO(devoncarew): We shouldn't have to do type checks here.
-    if (device is AndroidDevice) {
+    if (shouldBuild && device is AndroidDevice) {
       printTrace('Running build command.');
 
       int result = await buildApk(
