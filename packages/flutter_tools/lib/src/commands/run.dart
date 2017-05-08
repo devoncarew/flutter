@@ -232,15 +232,23 @@ class RunCommand extends RunCommandBase {
     // debug mode.
     final bool hotMode = shouldUseHotMode();
 
+    final List<FlutterDevice> flutterDevices = devices.map((Device device) {
+      return new FlutterDevice(device);
+    }).toList();
+
     if (argResults['machine']) {
-      if (devices.length > 1)
-        throwToolExit('--machine does not support -d all.');
+//      if (devices.length > 1)
+//        throwToolExit('--machine does not support -d all.');
       final Daemon daemon = new Daemon(stdinCommandStream, stdoutCommandResponse,
           notifyingLogger: new NotifyingLogger(), logToStdout: true);
       AppInstance app;
       try {
+        if (devices.length > 1) {
+          print('Running on ${devices.join(', ')}');
+        }
+
         app = await daemon.appDomain.startApp(
-          devices.first, fs.currentDirectory.path, targetFile, route,
+          flutterDevices, fs.currentDirectory.path, targetFile, route,
           _createDebuggingOptions(), hotMode,
           applicationBinary: argResults['use-application-binary'],
           projectRootPath: argResults['project-root'],
@@ -278,10 +286,6 @@ class RunCommand extends RunCommandBase {
       // Write our pid to the file.
       fs.file(pidFile).writeAsStringSync(pid.toString());
     }
-
-    final List<FlutterDevice> flutterDevices = devices.map((Device device) {
-      return new FlutterDevice(device);
-    }).toList();
 
     ResidentRunner runner;
     if (hotMode) {

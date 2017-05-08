@@ -24,6 +24,8 @@ import '../run_hot.dart';
 import '../runner/flutter_command.dart';
 import '../vmservice.dart';
 
+import 'package:flutter_tools/src/application_package.dart';
+
 const String protocolVersion = '0.2.0';
 
 /// A server process command. This command will start up a long-lived server.
@@ -296,73 +298,75 @@ class AppDomain extends Domain {
   final List<AppInstance> _apps = <AppInstance>[];
 
   Future<Map<String, dynamic>> start(Map<String, dynamic> args) async {
-    final String deviceId = _getStringArg(args, 'deviceId', required: true);
-    final String projectDirectory = _getStringArg(args, 'projectDirectory', required: true);
-    final bool startPaused = _getBoolArg(args, 'startPaused') ?? false;
-    final bool useTestFonts = _getBoolArg(args, 'useTestFonts') ?? false;
-    final String route = _getStringArg(args, 'route');
-    final String mode = _getStringArg(args, 'mode');
-    final String target = _getStringArg(args, 'target');
-    final bool enableHotReload = _getBoolArg(args, 'hot') ?? kHotReloadDefault;
+    throw 'foo';
 
-    final Device device = daemon.deviceDomain._getOrLocateDevice(deviceId);
-    if (device == null)
-      throw "device '$deviceId' not found";
-
-    if (!fs.isDirectorySync(projectDirectory))
-      throw "'$projectDirectory' does not exist";
-
-    final BuildMode buildMode = getBuildModeForName(mode) ?? BuildMode.debug;
-    DebuggingOptions options;
-    if (buildMode == BuildMode.release) {
-      options = new DebuggingOptions.disabled(buildMode);
-    } else {
-      options = new DebuggingOptions.enabled(
-        buildMode,
-        startPaused: startPaused,
-        useTestFonts: useTestFonts,
-      );
-    }
-
-    final AppInstance app = await startApp(
-      device,
-      projectDirectory,
-      target,
-      route,
-      options,
-      enableHotReload,
-    );
-
-    return <String, dynamic>{
-      'appId': app.id,
-      'deviceId': device.id,
-      'directory': projectDirectory,
-      'supportsRestart': isRestartSupported(enableHotReload, device)
-    };
+//    final String deviceId = _getStringArg(args, 'deviceId', required: true);
+//    final String projectDirectory = _getStringArg(args, 'projectDirectory', required: true);
+//    final bool startPaused = _getBoolArg(args, 'startPaused') ?? false;
+//    final bool useTestFonts = _getBoolArg(args, 'useTestFonts') ?? false;
+//    final String route = _getStringArg(args, 'route');
+//    final String mode = _getStringArg(args, 'mode');
+//    final String target = _getStringArg(args, 'target');
+//    final bool enableHotReload = _getBoolArg(args, 'hot') ?? kHotReloadDefault;
+//
+//    final Device device = daemon.deviceDomain._getOrLocateDevice(deviceId);
+//    if (device == null)
+//      throw "device '$deviceId' not found";
+//
+//    if (!fs.isDirectorySync(projectDirectory))
+//      throw "'$projectDirectory' does not exist";
+//
+//    final BuildMode buildMode = getBuildModeForName(mode) ?? BuildMode.debug;
+//    DebuggingOptions options;
+//    if (buildMode == BuildMode.release) {
+//      options = new DebuggingOptions.disabled(buildMode);
+//    } else {
+//      options = new DebuggingOptions.enabled(
+//        buildMode,
+//        startPaused: startPaused,
+//        useTestFonts: useTestFonts,
+//      );
+//    }
+//
+//    final AppInstance app = await startApp(
+//      device,
+//      projectDirectory,
+//      target,
+//      route,
+//      options,
+//      enableHotReload,
+//    );
+//
+//    return <String, dynamic>{
+//      'appId': app.id,
+//      'deviceId': device.id,
+//      'directory': projectDirectory,
+//      'supportsRestart': isRestartSupported(enableHotReload, device)
+//    };
   }
 
   Future<AppInstance> startApp(
-    Device device, String projectDirectory, String target, String route,
+    List<FlutterDevice> fDevices, String projectDirectory, String target, String route,
     DebuggingOptions options, bool enableHotReload, {
     String applicationBinary,
     String projectRootPath,
     String packagesFilePath,
     String projectAssets,
   }) async {
-    if (await device.isLocalEmulator && !isEmulatorBuildMode(options.buildMode))
-      throw '${toTitleCase(getModeName(options.buildMode))} mode is not supported for emulators.';
+//    if (await device.isLocalEmulator && !isEmulatorBuildMode(options.buildMode))
+//      throw '${toTitleCase(getModeName(options.buildMode))} mode is not supported for emulators.';
 
     // We change the current working directory for the duration of the `start` command.
     final Directory cwd = fs.currentDirectory;
     fs.currentDirectory = fs.directory(projectDirectory);
 
-    final FlutterDevice flutterDevice = new FlutterDevice(device);
+//    final FlutterDevice flutterDevice = new FlutterDevice(device);
 
     ResidentRunner runner;
 
     if (enableHotReload) {
       runner = new HotRunner(
-        <FlutterDevice>[flutterDevice],
+        fDevices,
         target: target,
         debuggingOptions: options,
         usesTerminalUI: false,
@@ -373,7 +377,7 @@ class AppDomain extends Domain {
       );
     } else {
       runner = new ColdRunner(
-        <FlutterDevice>[flutterDevice],
+        fDevices,
         target: target,
         debuggingOptions: options,
         usesTerminalUI: false,
@@ -384,9 +388,9 @@ class AppDomain extends Domain {
     final AppInstance app = new AppInstance(_getNewAppId(), runner: runner, logToStdout: daemon.logToStdout);
     _apps.add(app);
     _sendAppEvent(app, 'start', <String, dynamic>{
-      'deviceId': device.id,
+      'deviceId': fDevices.first.device.id,
       'directory': projectDirectory,
-      'supportsRestart': isRestartSupported(enableHotReload, device),
+      'supportsRestart': true,
     });
 
     Completer<DebugConnectionInfo> connectionInfoCompleter;
@@ -536,6 +540,7 @@ class DeviceDomain extends Domain {
     addDeviceDiscoverer(new AndroidDevices());
     addDeviceDiscoverer(new IOSDevices());
     addDeviceDiscoverer(new IOSSimulators());
+    addDeviceDiscoverer(new MultipleDeviceLauncherDiscoverer());
   }
 
   void addDeviceDiscoverer(PollingDeviceDiscovery discoverer) {
@@ -638,24 +643,24 @@ class DeviceDomain extends Domain {
     return devices.firstWhere((Device device) => device.id == deviceId, orElse: () => null);
   }
 
-  /// Return a known matching device, or scan for devices if no known match is found.
-  Device _getOrLocateDevice(String deviceId) {
-    // Look for an already known device.
-    final Device device = _getDevice(deviceId);
-    if (device != null)
-      return device;
-
-    // Scan the different device providers for a match.
-    for (PollingDeviceDiscovery discoverer in _discoverers) {
-      final List<Device> devices = discoverer.pollingGetDevices();
-      for (Device device in devices)
-        if (device.id == deviceId)
-          return device;
-    }
-
-    // No match found.
-    return null;
-  }
+//  /// Return a known matching device, or scan for devices if no known match is found.
+//  Device _getOrLocateDevice(String deviceId) {
+//    // Look for an already known device.
+//    final Device device = _getDevice(deviceId);
+//    if (device != null)
+//      return device;
+//
+//    // Scan the different device providers for a match.
+//    for (PollingDeviceDiscovery discoverer in _discoverers) {
+//      final List<Device> devices = discoverer.pollingGetDevices();
+//      for (Device device in devices)
+//        if (device.id == deviceId)
+//          return device;
+//    }
+//
+//    // No match found.
+//    return null;
+//  }
 }
 
 Stream<Map<String, dynamic>> get stdinCommandStream => stdin
@@ -885,4 +890,78 @@ class LogMessage {
   final StackTrace stackTrace;
 
   LogMessage(this.level, this.message, [this.stackTrace]);
+}
+
+class MultipleDeviceLauncherDiscoverer extends PollingDeviceDiscovery {
+  final AllDevice _allDevice = new AllDevice();
+
+  MultipleDeviceLauncherDiscoverer() : super('all device');
+
+  @override
+  bool get canListAnything => true;
+
+  @override
+  List<Device> pollingGetDevices() => <Device>[_allDevice];
+
+  @override
+  bool get supportsPlatform => true;
+}
+
+/// A special device that reports the id of `'all'`.
+class AllDevice extends Device {
+  AllDevice() : super('all');
+
+  @override
+  void clearLogs() {}
+
+  @override
+  DeviceLogReader getLogReader({ApplicationPackage app}) {
+    throw 'unimplemented: startApp()';
+  }
+
+  @override
+  Future<bool> installApp(ApplicationPackage app) {
+    throw 'unimplemented: startApp()';
+  }
+
+  @override
+  Future<bool> isAppInstalled(ApplicationPackage app) {
+    throw 'unimplemented: startApp()';
+  }
+
+  @override
+  Future<bool> isLatestBuildInstalled(ApplicationPackage app) {
+    throw 'unimplemented: startApp()';
+  }
+
+  @override
+  Future<bool> get isLocalEmulator => new Future<bool>.value(true);
+
+  @override
+  bool isSupported() => true;
+
+  @override
+  String get name => 'All';
+
+  @override
+  DevicePortForwarder get portForwarder => null;
+
+  @override
+  Future<String> get sdkNameAndVersion => null;
+
+  @override
+  Future<LaunchResult> startApp(ApplicationPackage package, BuildMode mode, {String mainPath, String route, DebuggingOptions debuggingOptions, Map<String, dynamic> platformArgs, String kernelPath, bool prebuiltApplication: false, bool applicationNeedsRebuild: false}) {
+    throw 'unimplemented: startApp()';
+  }
+
+  @override
+  Future<bool> stopApp(ApplicationPackage app) => new Future<bool>.value(true);
+
+  @override
+  Future<TargetPlatform> get targetPlatform => null;
+
+  @override
+  Future<bool> uninstallApp(ApplicationPackage app) {
+    throw 'unimplemented: startApp()';
+  }
 }
