@@ -64,11 +64,12 @@ enum TargetPlatform {
   android_arm,
   android_x64,
   android_x86,
-  ios,
   darwin_x64,
-  linux_x64,
-  windows_x64,
   fuchsia,
+  ios,
+  linux_x64,
+  tester,
+  windows_x64,
 }
 
 String getNameForTargetPlatform(TargetPlatform platform) {
@@ -79,16 +80,18 @@ String getNameForTargetPlatform(TargetPlatform platform) {
       return 'android-x64';
     case TargetPlatform.android_x86:
       return 'android-x86';
-    case TargetPlatform.ios:
-      return 'ios';
     case TargetPlatform.darwin_x64:
       return 'darwin-x64';
-    case TargetPlatform.linux_x64:
-      return 'linux-x64';
-    case TargetPlatform.windows_x64:
-      return 'windows-x64';
     case TargetPlatform.fuchsia:
       return 'fuchsia';
+    case TargetPlatform.ios:
+      return 'ios';
+    case TargetPlatform.linux_x64:
+      return 'linux-x64';
+    case TargetPlatform.tester:
+      return 'flutter-tester';
+    case TargetPlatform.windows_x64:
+      return 'windows-x64';
   }
   assert(false);
   return null;

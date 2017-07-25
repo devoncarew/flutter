@@ -205,7 +205,7 @@ Future<Device> findTargetDevice() async {
 
   if (deviceManager.hasSpecifiedDeviceId) {
     if (devices.isEmpty) {
-      printStatus("No devices found with name or id matching '${deviceManager.specifiedDeviceId}'");
+      printStatus("No devices found with name or id matching '${deviceManager.specifiedDeviceId}'.");
       return null;
     }
     if (devices.length > 1) {

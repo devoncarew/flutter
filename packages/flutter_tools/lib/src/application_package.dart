@@ -16,6 +16,7 @@ import 'build_info.dart';
 import 'globals.dart';
 import 'ios/plist_utils.dart' as plist;
 import 'ios/xcodeproj.dart';
+import 'tester/flutter_tester.dart';
 
 abstract class ApplicationPackage {
   /// Package ID from the Android Manifest or equivalent.
@@ -270,6 +271,8 @@ Future<ApplicationPackage> getApplicationPackageForPlatform(TargetPlatform platf
       return applicationBinary == null
           ? new IOSApp.fromCurrentDirectory()
           : new IOSApp.fromIpa(applicationBinary);
+    case TargetPlatform.tester:
+      return new FlutterTesterApp.fromCurrentDirectory();
     case TargetPlatform.darwin_x64:
     case TargetPlatform.linux_x64:
     case TargetPlatform.windows_x64:
@@ -300,6 +303,7 @@ class ApplicationPackageStore {
       case TargetPlatform.linux_x64:
       case TargetPlatform.windows_x64:
       case TargetPlatform.fuchsia:
+      case TargetPlatform.tester:
         return null;
     }
     return null;

@@ -75,6 +75,7 @@ class CachedArtifacts extends Artifacts {
       case TargetPlatform.linux_x64:
       case TargetPlatform.windows_x64:
       case TargetPlatform.fuchsia:
+      case TargetPlatform.tester:
         return _getHostArtifactPath(artifact, platform);
     }
     assert(false, 'Invalid platform $platform.');
@@ -150,6 +151,7 @@ class CachedArtifacts extends Artifacts {
       case TargetPlatform.darwin_x64:
       case TargetPlatform.windows_x64:
       case TargetPlatform.fuchsia:
+      case TargetPlatform.tester:
         assert(mode == null, 'Platform $platform does not support different build modes.');
         return fs.path.join(engineDir, platformName);
       case TargetPlatform.ios:

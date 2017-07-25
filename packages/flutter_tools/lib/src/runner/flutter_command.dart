@@ -240,10 +240,10 @@ abstract class FlutterCommand extends Command<Null> {
 
     if (devices.isEmpty && deviceManager.hasSpecifiedDeviceId) {
       printStatus("No devices found with name or id "
-          "matching '${deviceManager.specifiedDeviceId}'");
+          "matching '${deviceManager.specifiedDeviceId}'.");
       return null;
     } else if (devices.isEmpty && deviceManager.hasSpecifiedAllDevices) {
-      printStatus("No devices found");
+      printStatus("No devices found.");
       return null;
     } else if (devices.isEmpty) {
       printNoConnectedDevices();

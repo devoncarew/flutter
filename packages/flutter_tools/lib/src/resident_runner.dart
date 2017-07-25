@@ -229,7 +229,7 @@ class FlutterDevice {
     );
 
     if (package == null) {
-      String message = 'No application found for $targetPlatform.';
+      String message = 'No application found for ${getNameForTargetPlatform(targetPlatform)}.';
       final String hint = getMissingPackageHintForPlatform(targetPlatform);
       if (hint != null)
         message += '\n$hint';
@@ -267,7 +267,6 @@ class FlutterDevice {
     return 0;
   }
 
-
   Future<int> runCold({
     ColdRunner coldRunner,
     String route,
@@ -289,7 +288,7 @@ class FlutterDevice {
     }
 
     if (package == null) {
-      String message = 'No application found for $targetPlatform.';
+      String message = 'No application found for ${getNameForTargetPlatform(targetPlatform)}.';
       final String hint = getMissingPackageHintForPlatform(targetPlatform);
       if (hint != null)
         message += '\n$hint';
