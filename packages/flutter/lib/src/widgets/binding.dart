@@ -275,6 +275,17 @@ abstract class WidgetsBinding extends BindingBase with SchedulerBinding, Gesture
     );
 
     registerBoolServiceExtension(
+        name: 'showMemoryUsageOverlay',
+        getter: () => new Future<bool>.value(WidgetsApp.showMemoryUsageOverlayOverride),
+        setter: (bool value) {
+          if (WidgetsApp.showMemoryUsageOverlayOverride == value)
+            return new Future<Null>.value();
+          WidgetsApp.showMemoryUsageOverlayOverride = value;
+          return _forceRebuild();
+        }
+    );
+
+    registerBoolServiceExtension(
       name: 'debugAllowBanner',
       getter: () => new Future<bool>.value(WidgetsApp.debugAllowBannerOverride),
       setter: (bool value) {

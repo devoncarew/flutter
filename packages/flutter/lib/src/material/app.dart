@@ -100,6 +100,7 @@ class MaterialApp extends StatefulWidget {
     this.supportedLocales: const <Locale>[const Locale('en', 'US')],
     this.debugShowMaterialGrid: false,
     this.showPerformanceOverlay: false,
+    this.showMemoryUsageOverlay: false,
     this.checkerboardRasterCacheImages: false,
     this.checkerboardOffscreenLayers: false,
     this.showSemanticsDebugger: false,
@@ -501,6 +502,9 @@ class MaterialApp extends StatefulWidget {
   ///  * <https://flutter.io/debugging/#performanceoverlay>
   final bool showPerformanceOverlay;
 
+  /// TODO: doc
+  final bool showMemoryUsageOverlay;
+
   /// Turns on checkerboarding of raster cache images.
   final bool checkerboardRasterCacheImages;
 
@@ -689,6 +693,7 @@ class _MaterialAppState extends State<MaterialApp> {
         localeResolutionCallback: widget.localeResolutionCallback,
         supportedLocales: widget.supportedLocales,
         showPerformanceOverlay: widget.showPerformanceOverlay,
+        showMemoryUsageOverlay: widget.showMemoryUsageOverlay,
         checkerboardRasterCacheImages: widget.checkerboardRasterCacheImages,
         checkerboardOffscreenLayers: widget.checkerboardOffscreenLayers,
         showSemanticsDebugger: widget.showSemanticsDebugger,

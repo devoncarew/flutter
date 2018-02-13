@@ -14,6 +14,7 @@ import 'binding.dart';
 import 'framework.dart';
 import 'localizations.dart';
 import 'media_query.dart';
+import 'memory_usage_overlay.dart';
 import 'navigator.dart';
 import 'performance_overlay.dart';
 import 'semantics_debugger.dart';
@@ -85,6 +86,7 @@ class WidgetsApp extends StatefulWidget {
     this.localeResolutionCallback,
     this.supportedLocales: const <Locale>[const Locale('en', 'US')],
     this.showPerformanceOverlay: false,
+    this.showMemoryUsageOverlay: false,
     this.checkerboardRasterCacheImages: false,
     this.checkerboardOffscreenLayers: false,
     this.showSemanticsDebugger: false,
@@ -363,6 +365,9 @@ class WidgetsApp extends StatefulWidget {
   /// representative of what will happen in release mode.
   final bool debugShowCheckedModeBanner;
 
+  /// TODO: doc
+  final bool showMemoryUsageOverlay;
+
   /// If true, forces the performance overlay to be visible in all instances.
   ///
   /// Used by the `showPerformanceOverlay` observatory extension.
@@ -385,6 +390,9 @@ class WidgetsApp extends StatefulWidget {
   /// This is how `flutter run` turns off the banner when you take a screen shot
   /// with "s".
   static bool debugAllowBannerOverride = true;
+
+  /// TODO: doc
+  static bool showMemoryUsageOverlayOverride = false;
 
   @override
   _WidgetsAppState createState() => new _WidgetsAppState();
@@ -597,6 +605,14 @@ class _WidgetsAppState extends State<WidgetsApp> implements WidgetsBindingObserv
       }
       return true;
     }());
+
+    profile(() {
+      if (widget.showMemoryUsageOverlay || WidgetsApp.showMemoryUsageOverlayOverride) {
+        result = new MemoryUsageOverlay(
+          child: result,
+        );
+      }
+    });
 
     Widget title;
     if (widget.onGenerateTitle != null) {
