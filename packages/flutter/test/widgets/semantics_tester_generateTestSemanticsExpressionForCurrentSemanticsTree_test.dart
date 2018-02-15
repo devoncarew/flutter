@@ -106,14 +106,17 @@ void _tests() {
           children: <TestSemantics>[
             new TestSemantics(
               nextNodeId: 4,
+              previousNodeId: -1,
               children: <TestSemantics>[
                 new TestSemantics(
                   nextNodeId: 2,
+                  previousNodeId: 1,
                   children: <TestSemantics>[
                     new TestSemantics(
                       label: r'Plain text',
                       textDirection: TextDirection.ltr,
                       nextNodeId: 3,
+                      previousNodeId: 4,
                     ),
                     new TestSemantics(
                       flags: <SemanticsFlag>[SemanticsFlag.hasCheckedState, SemanticsFlag.isChecked, SemanticsFlag.isSelected],
@@ -125,6 +128,7 @@ void _tests() {
                       hint: r'test-hint',
                       textDirection: TextDirection.rtl,
                       nextNodeId: -1,
+                      previousNodeId: 2,
                     ),
                   ],
                 ),
