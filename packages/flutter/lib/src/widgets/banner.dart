@@ -15,12 +15,12 @@ const double _kHeight = 12.0; // height of banner
 const double _kBottomOffset = _kOffset + 0.707 * _kHeight; // offset plus sqrt(2)/2 * banner height
 final Rect _kRect = new Rect.fromLTWH(-_kOffset, _kOffset - _kHeight, _kOffset * 2.0, _kHeight);
 
-const Color _kColor = const Color(0xA0B71C1C);
+const Color _kColor = const Color(0xC03C3F41);
 const TextStyle _kTextStyle = const TextStyle(
-  color: const Color(0xFFFFFFFF),
-  fontSize: _kHeight * 0.85,
-  fontWeight: FontWeight.w900,
-  height: 1.0
+    color: const Color(0xFFCDCDCD),
+    fontSize: _kHeight * 0.75,
+    fontWeight: FontWeight.w900,
+    height: 1.0
 );
 
 /// Where to show a [Banner].
@@ -137,7 +137,7 @@ class BannerPainter extends CustomPainter {
       ..drawRect(_kRect, _paintBanner);
     final double width = _kOffset * 2.0;
     _textPainter.layout(minWidth: width, maxWidth: width);
-    _textPainter.paint(canvas, _kRect.topLeft + new Offset(0.0, (_kRect.height - _textPainter.height) / 2.0));
+    _textPainter.paint(canvas, _kRect.topLeft + new Offset(0.0, (_kRect.height - _textPainter.height + 1.0) / 2.0));
   }
 
   @override
@@ -233,7 +233,7 @@ class BannerPainter extends CustomPainter {
 /// See also:
 ///
 ///  * [CheckedModeBanner], which the [WidgetsApp] widget includes by default in
-///    debug mode, to show a banner that says "SLOW MODE".
+///    debug mode, to show a banner that says "DEBUG MODE".
 class Banner extends StatelessWidget {
   /// Creates a banner.
   ///
@@ -248,10 +248,10 @@ class Banner extends StatelessWidget {
     this.color: _kColor,
     this.textStyle: _kTextStyle,
   }) : assert(message != null),
-       assert(location != null),
-       assert(color != null),
-       assert(textStyle != null),
-       super(key: key);
+        assert(location != null),
+        assert(color != null),
+        assert(textStyle != null),
+        super(key: key);
 
   /// The widget to show behind the banner.
   ///
@@ -276,7 +276,7 @@ class Banner extends StatelessWidget {
   /// [location].
   final TextDirection textDirection;
 
-  /// Where to show the banner (e.g., the upper right corder).
+  /// Where to show the banner (e.g., the upper right corner).
   final BannerLocation location;
 
   /// The directionality of the layout.
@@ -323,7 +323,7 @@ class Banner extends StatelessWidget {
   }
 }
 
-/// Displays a [Banner] saying "SLOW MODE" when running in checked mode.
+/// Displays a [Banner] saying "DEBUG MODE" when running in checked mode.
 /// [MaterialApp] builds one of these by default.
 /// Does nothing in release mode.
 class CheckedModeBanner extends StatelessWidget {
@@ -344,7 +344,7 @@ class CheckedModeBanner extends StatelessWidget {
     assert(() {
       result = new Banner(
         child: result,
-        message: 'SLOW MODE',
+        message: 'DEBUG MODE',
         textDirection: TextDirection.ltr,
         location: BannerLocation.topEnd,
       );
@@ -358,7 +358,7 @@ class CheckedModeBanner extends StatelessWidget {
     super.debugFillProperties(description);
     String message = 'disabled';
     assert(() {
-      message = '"SLOW MODE"';
+      message = '"DEBUG MODE"';
       return true;
     }());
     description.add(new DiagnosticsNode.message(message));
