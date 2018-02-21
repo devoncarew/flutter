@@ -40,13 +40,21 @@ abstract class Logger {
   ///
   /// [message] is the message to display to the user; [progressId] provides an ID which can be
   /// used to identify this type of progress (`hot.reload`, `hot.restart`, ...).
-  Status startProgress(String message, { String progressId, bool expectSlowOperation: false });
+  ///
+  /// [progressIndicatorPadding] can optionally be used to specify spacing
+  /// between the [message] and the progress indicator.
+  Status startProgress(
+    String message, {
+    String progressId,
+    bool expectSlowOperation: false,
+    int progressIndicatorPadding: 52,
+  });
 }
 
-/// A [Status] object includes functionality of a [Spinner], but may also display
-/// diagnostic information like how long the spinner remained running between
-/// [start] and [stop] (or [cancel]).
-class Status extends Spinner {}
+class Status {
+  void stop() { }
+  void cancel() { }
+}
 
 typedef void _FinishCallback();
 
@@ -96,13 +104,23 @@ class StdoutLogger extends Logger {
   void printTrace(String message) { }
 
   @override
-  Status startProgress(String message, { String progressId, bool expectSlowOperation: false }) {
+  Status startProgress(
+    String message, {
+    String progressId,
+    bool expectSlowOperation: false,
+    int progressIndicatorPadding: 52,
+  }) {
     if (_status != null) {
       // Ignore nested progresses; return a no-op status object.
       return new Status();
     } else {
       if (supportsColor) {
-        _status = new _AnsiStatus(message, expectSlowOperation, () { _status = null; });
+        _status = new _AnsiStatus(
+          message,
+          expectSlowOperation,
+          () { _status = null; },
+          progressIndicatorPadding,
+        );
         return _status;
       } else {
         printStatus(message);
@@ -163,7 +181,12 @@ class BufferLogger extends Logger {
   void printTrace(String message) => _trace.writeln(message);
 
   @override
-  Status startProgress(String message, { String progressId, bool expectSlowOperation: false }) {
+  Status startProgress(
+    String message, {
+    String progressId,
+    bool expectSlowOperation: false,
+    int progressIndicatorPadding: 52,
+  }) {
     printStatus(message);
     return new Status();
   }
@@ -208,7 +231,12 @@ class VerboseLogger extends Logger {
   }
 
   @override
-  Status startProgress(String message, { String progressId, bool expectSlowOperation: false }) {
+  Status startProgress(
+    String message, {
+    String progressId,
+    bool expectSlowOperation: false,
+    int progressIndicatorPadding: 52,
+  }) {
     printStatus(message);
     return new Status();
   }
@@ -252,67 +280,30 @@ enum _LogType {
   trace
 }
 
+class _AnsiStatus extends Status {
+  _AnsiStatus(this.message, this.expectSlowOperation, this.onFinish, int padding) {
+    stopwatch = new Stopwatch()..start();
 
-/// A [Spinner] is a simple animation that does nothing but implement an ASCII
-/// spinner.  When stopped, the animation erases itself.
-class Spinner {
-  Spinner();
-  /// Use this factory to generate AnsiSpinner or Spinner as necessary, and
-  /// start them.
-  factory Spinner.forContextTerminal() {
-    if (terminal.supportsColor)
-      return new AnsiSpinner()..start();
-    return new Spinner()..start();
-  }
-  void start() {}
-  void stop() {}
-  void cancel() {}
-}
+    stdout.write('${message.padRight(padding)}     ');
+    stdout.write('${_progress[0]}');
 
-/// Just a spinner, nothing more, nothing less.
-class AnsiSpinner extends Spinner {
-  int index = 0;
-  bool live = true;
-  Timer timer;
-
-  static final List<String> _progress = <String>['-', r'\', '|', r'/', '-', r'\', '|', '/'];
-
-  void _callback(Timer _) {
-    stdout.write('\b${_progress[index]}');
-    index = ++index % _progress.length;
-  }
-
-  @override
-  void start() {
-    stdout.write(' ');
-    _callback(null);
     timer = new Timer.periodic(const Duration(milliseconds: 100), _callback);
   }
 
-  @override
-  void stop() {
-    if (!live)
-      return;
-    live = false;
-    timer.cancel();
-    stdout.write('\b');
-  }
+  static final List<String> _progress = <String>['-', r'\', '|', r'/', '-', r'\', '|', '/'];
 
-  @override
-  void cancel() => stop();
-}
-
-class _AnsiStatus extends Status with AnsiSpinner {
-  _AnsiStatus(this.message, this.expectSlowOperation, this.onFinish) {
-    stopwatch = new Stopwatch()..start();
-    stdout.write('${message.padRight(52)}     ');
-    start();
-  }
-
-  Stopwatch stopwatch;
   final String message;
   final bool expectSlowOperation;
   final _FinishCallback onFinish;
+  Stopwatch stopwatch;
+  Timer timer;
+  int index = 1;
+  bool live = true;
+
+  void _callback(Timer timer) {
+    stdout.write('\b${_progress[index]}');
+    index = ++index % _progress.length;
+  }
 
   @override
   void stop() {
@@ -320,13 +311,15 @@ class _AnsiStatus extends Status with AnsiSpinner {
 
     if (!live)
       return;
-    super.stop();
+    live = false;
 
     if (expectSlowOperation) {
       print('\b\b\b\b\b${getElapsedAsSeconds(stopwatch.elapsed).padLeft(5)}');
     } else {
       print('\b\b\b\b\b${getElapsedAsMilliseconds(stopwatch.elapsed).padLeft(5)}');
     }
+
+    timer.cancel();
   }
 
   @override
@@ -335,8 +328,9 @@ class _AnsiStatus extends Status with AnsiSpinner {
 
     if (!live)
       return;
-    super.cancel();
+    live = false;
 
-    print(' ');
+    print('\b ');
+    timer.cancel();
   }
 }
