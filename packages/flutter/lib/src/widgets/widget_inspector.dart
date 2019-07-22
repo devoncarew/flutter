@@ -908,18 +908,33 @@ mixin WidgetInspectorService {
 
   static const String _consoleObjectGroup = 'console-group';
 
+  static int _errorCount = 0;
+
   void _reportError(FlutterErrorDetails details) {
-    postEvent('Flutter.Error', _nodeToJson(
-      details.toDiagnosticsNode(),
-      _SerializationDelegate(
-        groupName: _consoleObjectGroup,
-        subtreeDepth: 5,
-        includeProperties: true,
-        expandPropertyValues: true,
-        maxDescendentsTruncatableNode: 5,
-        service: this,
-      ),
-    ));
+    if (_errorCount == 0) {
+      postEvent('Flutter.Error', _nodeToJson(
+        details.toDiagnosticsNode(),
+        _SerializationDelegate(
+          groupName: _consoleObjectGroup,
+          subtreeDepth: 5,
+          includeProperties: true,
+          expandPropertyValues: true,
+          maxDescendentsTruncatableNode: 5,
+          service: this,
+        ),
+      ));
+    } else {
+      debugPrint('Another exception was thrown: ${details.summary}');
+    }
+    _errorCount += 1;
+  }
+
+  /// Resets the count of errors used by [_reportError] to decide whether to
+  /// send an error message or print an abbreviation of one.
+  ///
+  /// After this is called, the next error message will be sent to clients.
+  static void _resetErrorCount() {
+    _errorCount = 0;
   }
 
   /// Called to register service extensions.
@@ -1838,6 +1853,7 @@ mixin WidgetInspectorService {
   /// [BindingBase.reassembleApplication].
   void performReassemble() {
     _clearStats();
+    _resetErrorCount();
   }
 }
 
