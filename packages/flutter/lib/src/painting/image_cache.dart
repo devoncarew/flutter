@@ -31,7 +31,7 @@ const int _kDefaultSizeBytes = 100 << 20; // 100 MiB
 ///
 /// A caller can determine whether an image is already in the cache by using
 /// [containsKey], which will return true if the image is tracked by the cache
-/// in a pending or compelted state. More fine grained information is available
+/// in a pending or completed state. More fine grained information is available
 /// by using the [statusForKey] method.
 ///
 /// Generally this class is not used directly. The [ImageProvider] class and its
@@ -186,6 +186,8 @@ class ImageCache {
           'currentSizeInBytes': _currentSizeBytes,
         },
       );
+
+      postEvent('ImageCache.clear', <String, dynamic>{});
     }
     _cache.clear();
     _pendingImages.clear();
@@ -237,7 +239,7 @@ class ImageCache {
       // will never complete, e.g. it was loaded in a FakeAsync zone.
       // In such a case, we need to make sure subsequent calls to
       // putIfAbsent don't return this image that may never complete.
-      final _LiveImage image = _liveImages.remove(key);
+      final _LiveImage image = _removeLiveImage(key);
       image?.removeListener();
     }
     final _PendingImage pendingImage = _pendingImages.remove(key);
@@ -255,7 +257,11 @@ class ImageCache {
       if (!kReleaseMode) {
         Timeline.instantSync('ImageCache.evict', arguments: <String, dynamic>{
           'type': 'keepAlive',
-          'sizeiInBytes': image.sizeBytes,
+          'sizeInBytes': image.sizeBytes,
+        });
+        postEvent('ImageCache.evict', <String, dynamic>{
+          'description': key.toString(),
+          'sizeInBytes': image.sizeBytes,
         });
       }
       _currentSizeBytes -= image.sizeBytes;
@@ -280,6 +286,16 @@ class ImageCache {
     // avoid this being a point of failure.
     assert(kReleaseMode || timelineTask != null);
     if (image.sizeBytes != null && image.sizeBytes <= maximumSizeBytes) {
+
+      if (!kReleaseMode) {
+        if (!_cache.containsKey(key)) {
+          postEvent('ImageCache.add', <String, dynamic>{
+            'description': key.toString(),
+            'sizeInBytes': image.sizeBytes,
+          });
+        }
+      }
+
       _currentSizeBytes += image.sizeBytes;
       _cache[key] = image;
       _checkCacheSize(timelineTask);
@@ -288,14 +304,36 @@ class ImageCache {
 
   void _trackLiveImage(Object key, _LiveImage image) {
     // Avoid adding unnecessary callbacks to the completer.
-    _liveImages.putIfAbsent(key, () {
+    final _LiveImage result = _liveImages.putIfAbsent(key, () {
       // Even if no callers to ImageProvider.resolve have listened to the stream,
       // the cache is listening to the stream and will remove itself once the
       // image completes to move it from pending to keepAlive.
       // Even if the cache size is 0, we still add this listener.
       image.completer.addOnLastListenerRemovedCallback(image.handleRemove);
+      if (!kReleaseMode) {
+        postEvent('ImageCache.add', <String, dynamic>{
+          'description': key.toString(),
+          'live': true,
+        });
+      }
       return image;
-    }).sizeBytes ??= image.sizeBytes;
+    });
+    result.sizeBytes ??= image.sizeBytes;
+    result.width ??= image.width;
+    result.height ??= image.height;
+  }
+
+  _LiveImage _removeLiveImage(Object key) {
+    final _LiveImage image = _liveImages.remove(key);
+    if (!kReleaseMode) {
+      if (image != null) {
+        postEvent('ImageCache.evict', <String, dynamic>{
+          'description': key.toString(),
+          'live': true,
+        });
+      }
+    }
+    return image;
   }
 
   /// Returns the previously cached [ImageStream] for the given key, if available;
@@ -340,7 +378,10 @@ class ImageCache {
       }
       // The image might have been keptAlive but had no listeners (so not live).
       // Make sure the cache starts tracking it as live again.
-      _trackLiveImage(key, _LiveImage(image.completer, image.sizeBytes, () => _liveImages.remove(key)));
+      _trackLiveImage(
+        key,
+        _LiveImage(image.completer, () => _removeLiveImage(key), image.sizeBytes, image.width, image.height),
+      );
       _cache[key] = image;
       return image.completer;
     }
@@ -356,7 +397,7 @@ class ImageCache {
 
     try {
       result = loader();
-      _trackLiveImage(key, _LiveImage(result, null, () => _liveImages.remove(key)));
+      _trackLiveImage(key, _LiveImage(result, () => _removeLiveImage(key), null, null, null));
     } catch (error, stackTrace) {
       if (!kReleaseMode) {
         timelineTask.finish(arguments: <String, dynamic>{
@@ -390,14 +431,15 @@ class ImageCache {
       // Images that fail to load don't contribute to cache size.
       final int imageSize = info?.image == null ? 0 : info.image.height * info.image.width * 4;
 
-      final _CachedImage image = _CachedImage(result, imageSize);
-
+      final _CachedImage image = _CachedImage(result, imageSize, info?.image?.width, info?.image?.height);
       _trackLiveImage(
         key,
         _LiveImage(
           result,
+          () => _removeLiveImage(key),
           imageSize,
-          () => _liveImages.remove(key),
+          info?.image?.width,
+          info?.image?.height,
         ),
       );
 
@@ -495,6 +537,10 @@ class ImageCache {
       _cache.remove(key);
       if (!kReleaseMode) {
         finishArgs['evictedKeys'].add(key.toString());
+        postEvent('ImageCache.evict', <String, dynamic>{
+          'description': key.toString(),
+          'sizeInBytes': image.sizeBytes,
+        });
       }
     }
     if (!kReleaseMode) {
@@ -505,6 +551,67 @@ class ImageCache {
     assert(_currentSizeBytes >= 0);
     assert(_cache.length <= maximumSize);
     assert(_currentSizeBytes <= maximumSizeBytes);
+  }
+
+  /// todo: doc
+  ///
+  /// We don't use Diagnosticable here as diagnostic properties aren't populated
+  /// in profile builds.
+  Map<String, dynamic> describe({bool includeImageInfo = false}) {
+    final Map<String, dynamic> info = <String, dynamic>{};
+
+    info['currentSize'] = currentSize;
+    info['maximumSize'] = maximumSize;
+    info['currentSizeBytes'] = currentSizeBytes;
+    info['maximumSizeBytes'] = maximumSizeBytes;
+    info['liveImageCount'] = liveImageCount;
+    info['pendingImageCount'] = pendingImageCount;
+
+    if (!includeImageInfo) {
+      return info;
+    }
+
+    final List<Map<String, dynamic>> cachedData = <Map<String, dynamic>>[];
+    for (final Object key in _cache.keys) {
+      final _CachedImage image = _cache[key];
+      cachedData.add(<String, dynamic>{
+        'description': key.toString(),
+        'sizeBytes': image.sizeBytes,
+        'width': image.width,
+        'height': image.height,
+        if (_liveImages.containsKey(key))
+          'live': true,
+      });
+    }
+    info['cachedImages'] = cachedData.reversed.toList();
+
+    final List<Map<String, dynamic>> liveData = <Map<String, dynamic>>[];
+    for (final Object key in _liveImages.keys) {
+      if (_cache.containsKey(key)) {
+        continue;
+      }
+
+      final _LiveImage image = _liveImages[key];
+      liveData.add(<String, dynamic>{
+        'description': key.toString(),
+        'sizeBytes': image.sizeBytes,
+        if (image.width != null)
+          'width': image.width,
+        if (image.height != null)
+          'height': image.height,
+      });
+    }
+    info['liveImages'] = liveData;
+
+    final List<Map<String, dynamic>> pendingData = <Map<String, dynamic>>[];
+    for (final Object key in _pendingImages.keys) {
+      pendingData.add(<String, dynamic>{
+        'description': key.toString(),
+      });
+    }
+    info['pendingImages'] = pendingData;
+
+    return info;
   }
 }
 
@@ -580,15 +687,17 @@ class ImageCacheStatus {
 }
 
 class _CachedImage {
-  _CachedImage(this.completer, this.sizeBytes);
+  _CachedImage(this.completer, this.sizeBytes, this.width, this.height);
 
   final ImageStreamCompleter completer;
   int sizeBytes;
+  int width;
+  int height;
 }
 
 class _LiveImage extends _CachedImage {
-  _LiveImage(ImageStreamCompleter completer, int sizeBytes, this.handleRemove)
-      : super(completer, sizeBytes);
+  _LiveImage(ImageStreamCompleter completer, this.handleRemove, int sizeBytes, int width, int height)
+      : super(completer, sizeBytes, width, height);
 
   final VoidCallback handleRemove;
 

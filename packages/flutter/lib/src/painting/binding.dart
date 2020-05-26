@@ -4,6 +4,7 @@
 
 import 'dart:typed_data' show Uint8List;
 import 'dart:ui' as ui show instantiateImageCodec, Codec;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show ServicesBinding;
 
@@ -29,6 +30,29 @@ mixin PaintingBinding on BindingBase, ServicesBinding {
   /// The current [PaintingBinding], if one has been created.
   static PaintingBinding get instance => _instance;
   static PaintingBinding _instance;
+
+  @override
+  void initServiceExtensions() {
+    super.initServiceExtensions();
+
+    if (!kReleaseMode) {
+      // These service extensions work in debug or profile mode.
+      registerServiceExtension(
+        name: 'imageCache.getInfo',
+        callback: (Map<String, dynamic> params) async {
+          final ImageCache cache = instance.imageCache;
+          return cache.describe(includeImageInfo: true);
+        },
+      );
+
+      registerSignalServiceExtension(
+        name: 'imageCache.clear',
+        callback: () async {
+          instance.imageCache.clear();
+        },
+      );
+    }
+  }
 
   /// [ShaderWarmUp] to be executed during [initInstances].
   ///
@@ -79,7 +103,8 @@ mixin PaintingBinding on BindingBase, ServicesBinding {
   /// [cacheHeight] with the other remaining null, in which case the omitted
   /// dimension will decode to its original size. When both are null or omitted,
   /// the image will be decoded at its native resolution.
-  Future<ui.Codec> instantiateImageCodec(Uint8List bytes, {
+  Future<ui.Codec> instantiateImageCodec(
+    Uint8List bytes, {
     int cacheWidth,
     int cacheHeight,
   }) {
@@ -134,7 +159,7 @@ mixin PaintingBinding on BindingBase, ServicesBinding {
 class _SystemFontsNotifier extends Listenable {
   final Set<VoidCallback> _systemFontsCallbacks = <VoidCallback>{};
 
-  void notifyListeners () {
+  void notifyListeners() {
     for (final VoidCallback callback in _systemFontsCallbacks) {
       callback();
     }
@@ -144,6 +169,7 @@ class _SystemFontsNotifier extends Listenable {
   void addListener(VoidCallback listener) {
     _systemFontsCallbacks.add(listener);
   }
+
   @override
   void removeListener(VoidCallback listener) {
     _systemFontsCallbacks.remove(listener);
